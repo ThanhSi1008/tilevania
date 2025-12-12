@@ -1,5 +1,4 @@
-require('dotenv').config({ path: '/Users/xis108/Desktop/ntap/GameServer/.env' });
-const app = require('./src/app');
+require('dotenv').config();const app = require('./src/app');
 
 const PORT = process.env.PORT || 3000;
 
