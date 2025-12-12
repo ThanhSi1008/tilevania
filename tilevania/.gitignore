@@ -1,3 +1,30 @@
-Library/
-Temp/
-Logs/
+# --- Unity Generated (RÁC - XÓA NGAY) ---
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+[Uu]ser[Ss]ettings/
+
+# --- IDE (Visual Studio / Rider) ---
+.vs/
+.idea/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
+
+# --- OS Junk ---
+.DS_Store
+Thumbs.db
