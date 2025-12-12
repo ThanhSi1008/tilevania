@@ -2,11 +2,13 @@ using UnityEngine;
 
 public static class APIConfig
 {
-#if UNITY_EDITOR
-    public const string API_BASE_URL = "http://localhost:3000";
-#else
-    public const string API_BASE_URL = "https://api.tilevania.com";
-#endif
+// #if UNITY_EDITOR
+//     public const string API_BASE_URL = "https://tilevania.onrender.com";
+// #else
+//     public const string API_BASE_URL = "https://tilevania.onrender.com";
+// #endif
+
+    public const string API_BASE_URL = "https://tilevania.onrender.com";
 
     // Bump when breaking changes require a forced client update.
     public const string CLIENT_VERSION = "1.0.0";
