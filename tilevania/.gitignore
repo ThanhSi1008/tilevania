@@ -1,16 +1,36 @@
-# --- Unity Generated (RÁC - XÓA NGAY) ---
+# ----------------------------------------
+# 1. UNITY GENERATED (RÁC - Cần xóa)
+# ----------------------------------------
+# Thư mục Library chứa cache import asset, rất nặng, Unity tự tạo lại được
 [Ll]ibrary/
+
+# Thư mục Temp và Obj chứa file tạm khi build
 [Tt]emp/
 [Oo]bj/
+
+# Thư mục Build (file game đã đóng gói .exe/.apk)
 [Bb]uild/
 [Bb]uilds/
+
+# Thư mục Logs (báo cáo lỗi, không cần thiết)
 [Ll]ogs/
-[Mm]emoryCaptures/
+
+# Cấu hình riêng của người dùng (layout cửa sổ...)
 [Uu]ser[Ss]ettings/
 
-# --- IDE (Visual Studio / Rider) ---
-.vs/
-.idea/
+# Memory Captures (khi profile game)
+[Mm]emoryCaptures/
+
+# ----------------------------------------
+# 2. USER SPECIFIC (Dựa trên tree của bạn)
+# ----------------------------------------
+# Thư mục báo cáo hiệu năng bạn đang có, chứa toàn file .log
+IndexingPerformanceReport/
+
+# ----------------------------------------
+# 3. IDE / EDITOR GENERATED (File ảo)
+# ----------------------------------------
+# Visual Studio / Rider / VS Code projects (tự sinh ra khi mở code)
 *.csproj
 *.unityproj
 *.sln
@@ -25,6 +45,15 @@
 *.opendb
 *.VC.db
 
-# --- OS Junk ---
+# Thư mục cấu hình của IDE
+.vs/
+.vscode/
+.idea/
+
+# ----------------------------------------
+# 4. OS JUNK (File rác hệ điều hành)
+# ----------------------------------------
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
