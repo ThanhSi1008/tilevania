@@ -342,5 +342,198 @@ public class LevelProgressManager : MonoBehaviour
             : "Level is locked";
         onResult?.Invoke(false, message);
     }
+
+    [Serializable]
+    private class LevelProgressResponse
+    {
+        public int count;
+        public LevelProgressData[] levelProgresses;
+    }
+
+    [Serializable]
+    private class LevelProgressData
+    {
+        public string _id;
+        public bool isCompleted;
+        public LevelData levelId;
+        public int bestScore;
+        public int coinsCollected;
+        public int enemiesDefeated;
+        public string completedAt;
+    }
+
+    /// <summary>
+    /// Get the highest completed level number. Returns 0 if no levels completed.
+    /// </summary>
+    public IEnumerator GetHighestCompletedLevelNumber(Action<int> onResult)
+    {
+        if (!HasAuth())
+        {
+            Debug.LogWarning("[LevelProgress] Cannot get highest completed level - not authenticated");
+            onResult?.Invoke(0);
+            yield break;
+        }
+
+        var userId = AuthManager.Instance.CurrentPlayer.userId;
+        APIResponse<string> apiResult = null;
+        yield return APIClient.Get(APIConfig.LevelProgress(userId), r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
+
+        if (apiResult != null && apiResult.success && !string.IsNullOrEmpty(apiResult.data))
+        {
+            try
+            {
+                var parsed = JsonUtility.FromJson<LevelProgressResponse>(apiResult.data);
+                if (parsed != null && parsed.levelProgresses != null && parsed.levelProgresses.Length > 0)
+                {
+                    int highestLevelNumber = 0;
+                    foreach (var progress in parsed.levelProgresses)
+                    {
+                        if (progress.isCompleted && progress.levelId != null)
+                        {
+                            highestLevelNumber = Mathf.Max(highestLevelNumber, progress.levelId.levelNumber);
+                        }
+                    }
+                    Debug.Log($"[LevelProgress] Highest completed level: {highestLevelNumber}");
+                    onResult?.Invoke(highestLevelNumber);
+                    yield break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[LevelProgress] Failed to parse level progress response: {ex.Message}");
+            }
+        }
+
+        Debug.Log("[LevelProgress] No completed levels found or error occurred");
+        onResult?.Invoke(0);
+    }
+
+    /// <summary>
+    /// Get the next level to play (highest completed + 1, or Level 1 if none completed).
+    /// Returns level data or null if error.
+    /// </summary>
+    public IEnumerator GetNextLevelToPlay(Action<LevelData> onResult)
+    {
+        int highestCompleted = 0;
+        yield return GetHighestCompletedLevelNumber(level => highestCompleted = level);
+
+        // Next level is highest completed + 1
+        int nextLevelNumber = highestCompleted + 1;
+        Debug.Log($"[LevelProgress] Next level to play: {nextLevelNumber} (highest completed: {highestCompleted})");
+
+        // Ensure levels are cached
+        yield return EnsureLevelsCached();
+
+        // Get level data for next level
+        var nextLevelData = GetLevelDataByNumber(nextLevelNumber);
+        if (nextLevelData == null)
+        {
+            Debug.LogWarning($"[LevelProgress] Level {nextLevelNumber} not found, falling back to Level 1");
+            nextLevelData = GetLevelDataByNumber(1);
+        }
+
+        onResult?.Invoke(nextLevelData);
+    }
+
+    private bool HasAuth()
+    {
+        return AuthManager.Instance != null && AuthManager.Instance.HasToken() && AuthManager.Instance.CurrentPlayer != null;
+    }
+
+    /// <summary>
+    /// Update currentLevel in GameProfile. Called when starting a level.
+    /// </summary>
+    public IEnumerator UpdateCurrentLevel(string levelId, System.Action<bool> onResult = null)
+    {
+        if (!HasAuth() || string.IsNullOrEmpty(levelId))
+        {
+            onResult?.Invoke(false);
+            yield break;
+        }
+
+        var userId = AuthManager.Instance.CurrentPlayer.userId;
+        var updateData = new { currentLevel = levelId };
+        var json = JsonUtility.ToJson(updateData);
+
+        APIResponse<string> apiResult = null;
+        yield return APIClient.Put(APIConfig.GameProfile(userId), json, r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
+
+        if (apiResult != null && apiResult.success)
+        {
+            Debug.Log($"[LevelProgress] Updated currentLevel to {levelId}");
+            onResult?.Invoke(true);
+        }
+        else
+        {
+            Debug.LogWarning($"[LevelProgress] Failed to update currentLevel: {apiResult?.error}");
+            onResult?.Invoke(false);
+        }
+    }
+
+    /// <summary>
+    /// Get current level from GameProfile. Returns null if not set.
+    /// </summary>
+    public IEnumerator GetCurrentLevel(Action<LevelData> onResult)
+    {
+        if (!HasAuth())
+        {
+            onResult?.Invoke(null);
+            yield break;
+        }
+
+        var userId = AuthManager.Instance.CurrentPlayer.userId;
+        APIResponse<string> apiResult = null;
+        yield return APIClient.Get(APIConfig.GameProfile(userId), r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
+
+        if (apiResult != null && apiResult.success && !string.IsNullOrEmpty(apiResult.data))
+        {
+            // Ensure levels are cached before parsing (moved outside try-catch to avoid CS1626)
+            yield return EnsureLevelsCached();
+            
+            try
+            {
+                var profile = JsonUtility.FromJson<GameProfileResponse>(apiResult.data);
+                if (profile != null && profile.gameProfile != null && profile.gameProfile.currentLevel != null)
+                {
+                    // Get level data by levelId
+                    var levelData = GetLevelData(profile.gameProfile.currentLevel._id);
+                    if (levelData != null)
+                    {
+                        Debug.Log($"[LevelProgress] Found currentLevel: {levelData.levelName} (Level {levelData.levelNumber})");
+                        onResult?.Invoke(levelData);
+                        yield break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[LevelProgress] Failed to parse game profile: {ex.Message}");
+            }
+        }
+
+        Debug.Log("[LevelProgress] No currentLevel set in GameProfile");
+        onResult?.Invoke(null);
+    }
+
+    [Serializable]
+    private class GameProfileResponse
+    {
+        public GameProfileData gameProfile;
+    }
+
+    [Serializable]
+    private class GameProfileData
+    {
+        public CurrentLevelData currentLevel;
+    }
+
+    [Serializable]
+    private class CurrentLevelData
+    {
+        public string _id;
+        public string levelName;
+        public string sceneName;
+        public int levelNumber;
+    }
 }
 

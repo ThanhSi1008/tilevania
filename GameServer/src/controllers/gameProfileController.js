@@ -5,7 +5,9 @@ const getGameProfile = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const gameProfile = await GameProfile.findOne({ userId }).populate('userId', 'username email');
+    const gameProfile = await GameProfile.findOne({ userId })
+      .populate('userId', 'username email')
+      .populate('currentLevel', 'levelName sceneName levelNumber isUnlocked requiredScoreToUnlock');
 
     if (!gameProfile) {
       return res.status(404).json({

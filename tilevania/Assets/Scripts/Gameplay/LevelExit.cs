@@ -284,6 +284,12 @@ public class LevelExit : MonoBehaviour
         // Level is unlocked - proceed with loading
         Debug.Log($"[LevelExit] Next level '{nextLevelData.levelName}' is unlocked, loading...");
         
+        // Update currentLevel in GameProfile to the next level
+        if (LevelProgressManager.Instance != null && !string.IsNullOrEmpty(nextLevelId))
+        {
+            yield return LevelProgressManager.Instance.UpdateCurrentLevel(nextLevelId);
+        }
+        
         FindFirstObjectByType<ScenePersist>()?.ResetScenePersist();
         
         // Hide overlay in current scene before loading new scene

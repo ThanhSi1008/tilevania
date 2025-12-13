@@ -48,6 +48,11 @@ const gameProfileSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    currentLevel: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Level',
+      default: null, // null means no current level (start from Level 1)
+    },
   },
   {
     timestamps: true,

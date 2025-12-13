@@ -599,6 +599,12 @@ public class GameSession : MonoBehaviour
             yield break;
         }
 
+        // Update currentLevel in GameProfile when starting a level
+        if (LevelProgressManager.Instance != null)
+        {
+            yield return LevelProgressManager.Instance.UpdateCurrentLevel(levelId);
+        }
+
         var payload = new SessionStartRequest
         {
             userId = userId,

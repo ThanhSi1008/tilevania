@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -128,15 +129,66 @@ public class MainMenuManager : MonoBehaviour
             return;
         }
 
-        // Load gameplay scene
-        if (string.IsNullOrEmpty(gameplaySceneName))
+        // Start coroutine to load the appropriate level based on progress
+        StartCoroutine(LoadNextLevelCoroutine());
+    }
+
+    private IEnumerator LoadNextLevelCoroutine()
+    {
+        // Get LevelProgressManager instance
+        if (LevelProgressManager.Instance == null)
         {
-            Debug.LogError("Gameplay scene name is not set in MainMenuManager!");
-            return;
+            Debug.LogError("[MainMenuManager] LevelProgressManager.Instance is null!");
+            yield break;
         }
 
-        Debug.Log($"Loading scene: {gameplaySceneName}");
-        SceneManager.LoadScene(gameplaySceneName);
+        // First, try to get current level from GameProfile (saved progress)
+        LevelProgressManager.LevelData currentLevelData = null;
+        yield return LevelProgressManager.Instance.GetCurrentLevel(data => currentLevelData = data);
+
+        LevelProgressManager.LevelData levelToLoad = currentLevelData;
+
+        // If no current level saved, get next level to play (highest completed + 1, or Level 1)
+        if (levelToLoad == null)
+        {
+            Debug.Log("[MainMenuManager] No current level saved, determining next level to play...");
+            yield return LevelProgressManager.Instance.GetNextLevelToPlay(data => levelToLoad = data);
+        }
+        else
+        {
+            Debug.Log($"[MainMenuManager] Found saved current level: {levelToLoad.levelName} (Level {levelToLoad.levelNumber})");
+        }
+
+        if (levelToLoad == null)
+        {
+            Debug.LogWarning("[MainMenuManager] Could not determine level to load, using default: Level 1");
+            // Fallback to default scene
+            if (string.IsNullOrEmpty(gameplaySceneName))
+            {
+                Debug.LogError("Gameplay scene name is not set in MainMenuManager!");
+                yield break;
+            }
+            SceneManager.LoadScene(gameplaySceneName);
+            yield break;
+        }
+
+        // Load the level's scene
+        string sceneToLoad = levelToLoad.sceneName;
+        if (string.IsNullOrEmpty(sceneToLoad))
+        {
+            // Fallback to levelName if sceneName is not available
+            sceneToLoad = levelToLoad.levelName;
+        }
+
+        if (string.IsNullOrEmpty(sceneToLoad))
+        {
+            Debug.LogError($"[MainMenuManager] Level {levelToLoad.levelNumber} has no sceneName or levelName!");
+            // Fallback to default
+            sceneToLoad = gameplaySceneName;
+        }
+
+        Debug.Log($"[MainMenuManager] Loading level: {sceneToLoad} (Level {levelToLoad.levelNumber})");
+        SceneManager.LoadScene(sceneToLoad);
     }
 }
 
