@@ -1,3 +1,4 @@
+using System.Collections;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -123,7 +124,66 @@ public class PlayerMovement : MonoBehaviour
             isAlive = false;
             myAnimator.SetTrigger("Dying");
             myRigidbody.linearVelocity = deathKick;
-            FindAnyObjectByType<GameSession>().ProcessPlayerDeath();
+            
+            // Try to find GameSession - use FindFirstObjectByType for better reliability
+            var gameSession = FindFirstObjectByType<GameSession>();
+            if (gameSession != null)
+            {
+                gameSession.ProcessPlayerDeath();
+            }
+            else
+            {
+                // Try FindAnyObjectByType as fallback
+                gameSession = FindAnyObjectByType<GameSession>();
+                if (gameSession != null)
+                {
+                    gameSession.ProcessPlayerDeath();
+                }
+                else
+                {
+                    Debug.LogWarning("[PlayerMovement] GameSession not found, cannot process death. GameSession may have been destroyed or not yet created. Waiting and retrying...");
+                    // Wait a frame and retry - GameSession might still be initializing
+                    StartCoroutine(RetryFindGameSessionAndProcessDeath());
+                }
+            }
+        }
+    }
+    
+    private System.Collections.IEnumerator RetryFindGameSessionAndProcessDeath()
+    {
+        // Wait longer for GameSession to be created/initialized
+        // GameSession might be created in OnSceneLoaded or Start(), which can take a few frames
+        int maxRetries = 10;
+        int retryCount = 0;
+        
+        while (retryCount < maxRetries)
+        {
+            yield return null; // Wait one frame
+            
+            var gameSession = FindFirstObjectByType<GameSession>();
+            if (gameSession != null)
+            {
+                Debug.Log($"[PlayerMovement] Found GameSession after {retryCount + 1} retries, processing death");
+                gameSession.ProcessPlayerDeath();
+                yield break; // Exit coroutine
+            }
+            
+            retryCount++;
+        }
+        
+        // If still not found after all retries, try one more time with FindAnyObjectByType
+        var gameSessionFallback = FindAnyObjectByType<GameSession>();
+        if (gameSessionFallback != null)
+        {
+            Debug.Log("[PlayerMovement] Found GameSession with FindAnyObjectByType after all retries, processing death");
+            gameSessionFallback.ProcessPlayerDeath();
+        }
+        else
+        {
+            Debug.LogError("[PlayerMovement] GameSession still not found after all retries. Reloading scene as fallback.");
+            // If GameSession is still not found, reload the current scene (basic death handling)
+            int currentSceneIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;
+            UnityEngine.SceneManagement.SceneManager.LoadScene(currentSceneIndex);
         }
     }
 

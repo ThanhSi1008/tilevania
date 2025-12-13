@@ -24,6 +24,7 @@ public static class APIConfig
     public static string GameProfileScore(string userId) => $"/api/gameProfile/{userId}/score";
     public static string GameProfileCoins(string userId) => $"/api/gameProfile/{userId}/coins";
     public static string GameProfileDeath(string userId) => $"/api/gameProfile/{userId}/death";
+    public static string GameProfileLives(string userId) => $"/api/gameProfile/{userId}/lives";
 
     // Levels & level progress
     public static string Levels => "/api/levels";

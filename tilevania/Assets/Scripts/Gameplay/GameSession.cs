@@ -43,7 +43,7 @@ public class GameSession : MonoBehaviour
             // start session immediately (OnSceneLoaded won't be called for already-loaded scenes)
             if (IsGameplayScene())
             {
-                Debug.Log($"[GameSession] Awake() - Already in gameplay scene, will start session in Start()");
+                // Debug.Log($"[GameSession] Awake() - Already in gameplay scene, will start session in Start()");
             }
         }
     }
@@ -58,13 +58,13 @@ public class GameSession : MonoBehaviour
         // Only end if we're actually being disabled (not destroyed)
         if (isSessionActive && !isEndingSession && !isEndingSessionStatic && this != null && gameObject != null)
         {
-            Debug.Log("[GameSession] OnDisable called - ending session as ABANDONED (using helper method)");
+            // Debug.Log("[GameSession] OnDisable called - ending session as ABANDONED (using helper method)");
             isEndingSession = true;
             EndSessionWhenInactive("ABANDONED");
         }
         else if (isEndingSessionStatic)
         {
-            Debug.Log("[GameSession] OnDisable called but session already ending (static flag), skipping");
+            // Debug.Log("[GameSession] OnDisable called but session already ending (static flag), skipping");
         }
     }
 
@@ -78,7 +78,7 @@ public class GameSession : MonoBehaviour
         // Use DestroyImmediate since scene is unloading
         if (currentTempGO != null)
         {
-            Debug.Log("[GameSession] OnDestroy - cleaning up temporary GameObject immediately with DestroyImmediate");
+            // Debug.Log("[GameSession] OnDestroy - cleaning up temporary GameObject immediately with DestroyImmediate");
             var tempGO = currentTempGO;
             currentTempGO = null;
             isEndingSessionStatic = false;
@@ -86,7 +86,7 @@ public class GameSession : MonoBehaviour
             if (tempGO != null)
             {
                 DestroyImmediate(tempGO);
-                Debug.Log("[GameSession] ✅ Temporary GameObject destroyed immediately in OnDestroy");
+                // Debug.Log("[GameSession] ✅ Temporary GameObject destroyed immediately in OnDestroy");
             }
         }
         
@@ -96,21 +96,21 @@ public class GameSession : MonoBehaviour
         {
             if (gameObject != null && gameObject.activeInHierarchy)
             {
-                Debug.Log("[GameSession] OnDestroy called - ending session as ABANDONED");
+                // Debug.Log("[GameSession] OnDestroy called - ending session as ABANDONED");
                 isEndingSession = true;
                 StartCoroutine(OnGameEnd("ABANDONED"));
             }
             else if (gameObject != null)
             {
                 // If GameObject is inactive, try to end session using a helper
-                Debug.LogWarning("[GameSession] Cannot end session in OnDestroy - GameObject is inactive, trying alternative method");
+                // Debug.LogWarning("[GameSession] Cannot end session in OnDestroy - GameObject is inactive, trying alternative method");
                 isEndingSession = true;
                 EndSessionWhenInactive("ABANDONED");
             }
         }
         else
         {
-            Debug.Log($"[GameSession] OnDestroy called but session already ending/ended (isEndingSession={isEndingSession}, isEndingSessionStatic={isEndingSessionStatic}), skipping");
+            // Debug.Log($"[GameSession] OnDestroy called but session already ending/ended (isEndingSession={isEndingSession}, isEndingSessionStatic={isEndingSessionStatic}), skipping");
         }
     }
     
@@ -166,7 +166,7 @@ public class GameSession : MonoBehaviour
         // Prevent multiple calls - if already ending, don't create another temporary GameObject
         if (isEndingSessionStatic && currentTempGO != null)
         {
-            Debug.Log("[GameSession] Session is already being ended, skipping duplicate call");
+            // Debug.Log("[GameSession] Session is already being ended, skipping duplicate call");
             return;
         }
 
@@ -221,7 +221,7 @@ public class GameSession : MonoBehaviour
     {
         if (tempGO != null)
         {
-            Debug.Log($"[GameSession] Cleaning up temporary GameObject: {tempGO.name}");
+            // Debug.Log($"[GameSession] Cleaning up temporary GameObject: {tempGO.name}");
             
             // Clear static reference first (before destroy) to prevent double cleanup
             bool wasTracked = (currentTempGO == tempGO);
@@ -237,22 +237,22 @@ public class GameSession : MonoBehaviour
             {
                 // Scene is unloading, use DestroyImmediate
                 DestroyImmediate(tempGO);
-                Debug.Log("[GameSession] ✅ Temporary GameObject destroyed immediately (scene unloading)");
+                // Debug.Log("[GameSession] ✅ Temporary GameObject destroyed immediately (scene unloading)");
             }
             else if (Application.isPlaying)
             {
                 Destroy(tempGO);
-                Debug.Log("[GameSession] ✅ Temporary GameObject destroyed after session end");
+                // Debug.Log("[GameSession] ✅ Temporary GameObject destroyed after session end");
             }
             else
             {
                 DestroyImmediate(tempGO);
-                Debug.Log("[GameSession] ✅ Temporary GameObject destroyed immediately (edit mode)");
+                // Debug.Log("[GameSession] ✅ Temporary GameObject destroyed immediately (edit mode)");
             }
         }
         else
         {
-            Debug.LogWarning("[GameSession] CleanupTemporaryGameObject called with null GameObject");
+            // Debug.LogWarning("[GameSession] CleanupTemporaryGameObject called with null GameObject");
         }
     }
 
@@ -261,7 +261,7 @@ public class GameSession : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        Debug.Log($"[GameSession] OnSceneLoaded - Scene: {scene.name}, BuildIndex: {scene.buildIndex}, Mode: {mode}");
+        // Debug.Log($"[GameSession] OnSceneLoaded - Scene: {scene.name}, BuildIndex: {scene.buildIndex}, Mode: {mode}");
         
         // Reset loading flag when new scene is loaded
         LevelExit.IsLoading = false;
@@ -273,7 +273,7 @@ public class GameSession : MonoBehaviour
         // This can happen when scene is not fully loaded yet
         if (scene.buildIndex < 0 || string.IsNullOrEmpty(scene.name))
         {
-            Debug.LogWarning($"[GameSession] Skipping invalid scene in OnSceneLoaded - scene.name='{scene.name}', buildIndex={scene.buildIndex}");
+            // Debug.LogWarning($"[GameSession] Skipping invalid scene in OnSceneLoaded - scene.name='{scene.name}', buildIndex={scene.buildIndex}");
             return;
         }
         
@@ -281,7 +281,7 @@ public class GameSession : MonoBehaviour
         // Unity may call OnSceneLoaded multiple times, or when scene is already loaded
         if (lastStartedSceneName == scene.name && (isStartingSession || isSessionActive))
         {
-            Debug.Log($"[GameSession] OnSceneLoaded called for already processed scene '{scene.name}', skipping");
+            // Debug.Log($"[GameSession] OnSceneLoaded called for already processed scene '{scene.name}', skipping");
             return;
         }
         
@@ -367,7 +367,7 @@ public class GameSession : MonoBehaviour
         
         if (!foundOverlay)
         {
-            Debug.LogWarning("[GameSession] LoadingOverlay not found in any scene - it may not exist or has a different name");
+            // Debug.LogWarning("[GameSession] LoadingOverlay not found in any scene - it may not exist or has a different name");
         }
     }
     
@@ -406,24 +406,39 @@ public class GameSession : MonoBehaviour
             }
         }
         
-        Debug.Log($"[GameSession] Loading overlay '{overlay.name}' hidden (Scene: {overlay.scene.name})");
+        // Debug.Log($"[GameSession] Loading overlay '{overlay.name}' hidden (Scene: {overlay.scene.name})");
     }
 
     void Start()
     {
-        livesText.text = playerLives.ToString();
-        scoreText.text = score.ToString();
+        // Initialize UI with current values (will be updated when lives are loaded from server)
+        // For gameplay scenes, ensure lives is at least 3 (default) if not loaded yet
+        if (IsGameplayScene() && playerLives <= 0)
+        {
+            playerLives = 3; // Default to 3 lives for new game session
+            // Debug.Log("[GameSession] Start() - Setting default lives to 3 for gameplay scene");
+        }
+        
+        if (livesText != null)
+        {
+            livesText.text = playerLives.ToString();
+            // Debug.Log($"[GameSession] Start() - Initialized livesText to {playerLives}");
+        }
+        if (scoreText != null)
+        {
+            scoreText.text = score.ToString();
+        }
         
         // Also try to start session in Start() in case OnSceneLoaded wasn't called
         // (e.g., if scene was already loaded when GameSession was created)
         if (IsGameplayScene())
         {
-            Debug.Log($"[GameSession] Start() called - Scene: {SceneManager.GetActiveScene().name}, BuildIndex: {SceneManager.GetActiveScene().buildIndex}");
+            // Debug.Log($"[GameSession] Start() called - Scene: {SceneManager.GetActiveScene().name}, BuildIndex: {SceneManager.GetActiveScene().buildIndex}");
             StartSessionForScene(SceneManager.GetActiveScene());
         }
         else
         {
-            Debug.Log($"[GameSession] Start() called but not a gameplay scene - Scene: {SceneManager.GetActiveScene().name}");
+            // Debug.Log($"[GameSession] Start() called but not a gameplay scene - Scene: {SceneManager.GetActiveScene().name}");
         }
     }
 
@@ -434,13 +449,13 @@ public class GameSession : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[GameSession] StartSessionForScene - Scene: {scene.name}, BuildIndex: {scene.buildIndex}");
+        // Debug.Log($"[GameSession] StartSessionForScene - Scene: {scene.name}, BuildIndex: {scene.buildIndex}");
         
         // Don't start a new session if we're already starting one
         // This prevents duplicate session starts when both OnSceneLoaded and Start() are called
         if (isStartingSession)
         {
-            Debug.Log("[GameSession] Session is already being started, skipping duplicate start");
+            // Debug.Log("[GameSession] Session is already being started, skipping duplicate start");
             return;
         }
         
@@ -449,7 +464,7 @@ public class GameSession : MonoBehaviour
         // Also reset lastStartedSceneName if we're loading a different scene
         if (lastStartedSceneName != null && lastStartedSceneName != scene.name)
         {
-            Debug.Log($"[GameSession] Loading different scene - previous: {lastStartedSceneName}, new: {scene.name}");
+            // Debug.Log($"[GameSession] Loading different scene - previous: {lastStartedSceneName}, new: {scene.name}");
             // Reset flags when switching to a different scene
             isStartingSession = false;
             isSessionActive = false;
@@ -460,7 +475,7 @@ public class GameSession : MonoBehaviour
         }
         else if (isSessionActive && lastStartedSceneName == scene.name)
         {
-            Debug.LogWarning("[GameSession] Previous session was still active when loading same scene - clearing it");
+            // Debug.LogWarning("[GameSession] Previous session was still active when loading same scene - clearing it");
             isSessionActive = false;
             if (SessionManager.Instance != null)
             {
@@ -544,7 +559,7 @@ public class GameSession : MonoBehaviour
 
     private IEnumerator OnGameStart()
     {
-        Debug.Log("[GameSession] OnGameStart() called");
+        // Debug.Log("[GameSession] OnGameStart() called");
         
         // Mark that we're starting a session
         isStartingSession = true;
@@ -554,14 +569,14 @@ public class GameSession : MonoBehaviour
         
         if (AuthManager.Instance == null || !AuthManager.Instance.HasToken())
         {
-            Debug.LogWarning("[GameSession] ❌ Cannot start session - user not authenticated");
+            // Debug.LogWarning("[GameSession] ❌ Cannot start session - user not authenticated");
             isStartingSession = false;
             yield break;
         }
 
         if (SessionManager.Instance == null)
         {
-            Debug.LogError("[GameSession] ❌ SessionManager.Instance is null");
+            // Debug.LogError("[GameSession] ❌ SessionManager.Instance is null");
             isStartingSession = false;
             yield break;
         }
@@ -569,7 +584,7 @@ public class GameSession : MonoBehaviour
         // Clear any existing session first
         if (!string.IsNullOrEmpty(SessionManager.Instance.ActiveSessionId))
         {
-            Debug.Log($"[GameSession] Clearing previous session: {SessionManager.Instance.ActiveSessionId}");
+            // Debug.Log($"[GameSession] Clearing previous session: {SessionManager.Instance.ActiveSessionId}");
             SessionManager.Instance.ClearSession();
         }
 
@@ -581,7 +596,7 @@ public class GameSession : MonoBehaviour
 
         var userId = AuthManager.Instance.CurrentPlayer?.userId;
         var currentScene = SceneManager.GetActiveScene();
-        Debug.Log($"[GameSession] Resolving levelId for userId={userId}, scene='{currentScene.name}', buildIndex={currentScene.buildIndex}...");
+        // Debug.Log($"[GameSession] Resolving levelId for userId={userId}, scene='{currentScene.name}', buildIndex={currentScene.buildIndex}...");
         
         // Resolve levelId from server definitions
         yield return StartCoroutine(ResolveLevelId(levelId =>
@@ -590,19 +605,45 @@ public class GameSession : MonoBehaviour
         }));
 
         var levelId = currentLevelId;
-        Debug.Log($"[GameSession] Resolved levelId={levelId}");
+        // Debug.Log($"[GameSession] Resolved levelId={levelId}");
 
         if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(levelId))
         {
-            Debug.LogError($"[GameSession] ❌ Cannot start session - userId={userId}, levelId={levelId}");
+            // Debug.LogError($"[GameSession] ❌ Cannot start session - userId={userId}, levelId={levelId}");
             isStartingSession = false;
             yield break;
         }
 
         // Update currentLevel in GameProfile when starting a level
+        Debug.Log($"[GameSession] OnGameStart: About to update currentLevel - levelId={levelId}, scene={SceneManager.GetActiveScene().name}");
         if (LevelProgressManager.Instance != null)
         {
-            yield return LevelProgressManager.Instance.UpdateCurrentLevel(levelId);
+            Debug.Log($"[GameSession] OnGameStart: Updating currentLevel to levelId={levelId} before starting session");
+            bool updateSuccess = false;
+            yield return LevelProgressManager.Instance.UpdateCurrentLevel(levelId, success => updateSuccess = success);
+            if (updateSuccess)
+            {
+                Debug.Log($"[GameSession] ✅ OnGameStart: Successfully updated currentLevel to {levelId}");
+            }
+            else
+            {
+                Debug.LogWarning($"[GameSession] ❌ OnGameStart: Failed to update currentLevel to {levelId}");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[GameSession] OnGameStart: LevelProgressManager.Instance is null, cannot update currentLevel");
+        }
+
+        // Load currentLives from server BEFORE starting session
+        // This ensures lives are loaded and displayed before player can interact
+        yield return StartCoroutine(LoadLivesFromServer());
+        
+        // Ensure livesText is updated after loading (in case it wasn't updated in LoadLivesFromServer)
+        if (livesText != null)
+        {
+            livesText.text = playerLives.ToString();
+            // Debug.Log($"[GameSession] OnGameStart: Updated livesText to {playerLives} after loading from server");
         }
 
         var payload = new SessionStartRequest
@@ -614,11 +655,11 @@ public class GameSession : MonoBehaviour
         var json = JsonUtility.ToJson(payload);
         APIResponse<string> apiResult = null;
 
-        Debug.Log($"[GameSession] Starting session on server - userId={userId}, levelId={levelId}");
+        // Debug.Log($"[GameSession] Starting session on server - userId={userId}, levelId={levelId}");
         var startTime = Time.realtimeSinceStartup;
         yield return APIClient.Post(APIConfig.Sessions, json, r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
         var elapsed = Time.realtimeSinceStartup - startTime;
-        Debug.Log($"[GameSession] Session start request completed in {elapsed:F2}s");
+        // Debug.Log($"[GameSession] Session start request completed in {elapsed:F2}s");
 
         if (apiResult != null && apiResult.success && !string.IsNullOrEmpty(apiResult.data))
         {
@@ -631,27 +672,27 @@ public class GameSession : MonoBehaviour
                     cachedSessionId = response.session._id; // Cache sessionId in case SessionManager.Instance becomes null
                     isSessionActive = true; // Only set to true after successful session creation
                     isStartingSession = false; // Mark that session start is complete
-                    Debug.Log($"[GameSession] ✅ Session started successfully - sessionId={response.session._id}, isSessionActive={isSessionActive}");
+                    // Debug.Log($"[GameSession] ✅ Session started successfully - sessionId={response.session._id}, isSessionActive={isSessionActive}");
                 }
                 else
                 {
                     isStartingSession = false; // Mark that session start failed
-                    Debug.LogWarning("[GameSession] ❌ Failed to parse session start response");
-                    Debug.LogWarning($"[GameSession] Response data: {apiResult.data}");
+                    // Debug.LogWarning("[GameSession] ❌ Failed to parse session start response");
+                    // Debug.LogWarning($"[GameSession] Response data: {apiResult.data}");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 isStartingSession = false; // Mark that session start failed
-                Debug.LogError($"[GameSession] ❌ Error parsing session start response: {ex.Message}");
-                Debug.LogError($"[GameSession] Response data: {apiResult.data}");
+                // Debug.LogError($"[GameSession] ❌ Error parsing session start response");
+                // Debug.LogError($"[GameSession] Response data: {apiResult.data}");
             }
         }
         else
         {
             isStartingSession = false; // Mark that session start failed
-            Debug.LogWarning($"[GameSession] ❌ Failed to start session - Status: {apiResult?.statusCode}, Error: {apiResult?.error}");
-            Debug.LogWarning($"[GameSession] Response data: {apiResult?.data}");
+            // Debug.LogWarning($"[GameSession] ❌ Failed to start session - Status: {apiResult?.statusCode}, Error: {apiResult?.error}");
+            // Debug.LogWarning($"[GameSession] Response data: {apiResult?.data}");
         }
     }
 
@@ -679,11 +720,11 @@ public class GameSession : MonoBehaviour
 
         if (apiResult != null && apiResult.success)
         {
-            Debug.Log($"[GameSession] Stats synced - Score: {score}, Coins: {coinsCollected}, Deaths: {deathCount}");
+            // Debug.Log($"[GameSession] Stats synced - Score: {score}, Coins: {coinsCollected}, Deaths: {deathCount}");
         }
         else
         {
-            Debug.LogWarning($"[GameSession] Failed to sync stats - Status: {apiResult?.statusCode}");
+            // Debug.LogWarning($"[GameSession] Failed to sync stats - Status: {apiResult?.statusCode}");
         }
     }
 
@@ -694,14 +735,14 @@ public class GameSession : MonoBehaviour
 
     private IEnumerator OnGameEnd(string status = "COMPLETED")
     {
-        Debug.Log($"[GameSession] OnGameEnd called with status={status}");
-        Debug.Log($"[GameSession] isSessionActive={isSessionActive}, isStartingSession={isStartingSession}, hasSessionManager={SessionManager.Instance != null}, sessionId={SessionManager.Instance?.ActiveSessionId}");
+        // Debug.Log($"[GameSession] OnGameEnd called with status={status}");
+        // Debug.Log($"[GameSession] isSessionActive={isSessionActive}, isStartingSession={isStartingSession}, hasSessionManager={SessionManager.Instance != null}, sessionId={SessionManager.Instance?.ActiveSessionId}");
 
         // If session is currently being started, wait a bit for it to complete
         // This handles the case where player completes level very quickly
         if (isStartingSession && !isSessionActive)
         {
-            Debug.Log("[GameSession] Session is still starting, waiting up to 2 seconds for it to complete...");
+            // Debug.Log("[GameSession] Session is still starting, waiting up to 2 seconds for it to complete...");
             float waitTime = 0f;
             float maxWaitTime = 2f;
             while (isStartingSession && !isSessionActive && waitTime < maxWaitTime)
@@ -712,11 +753,11 @@ public class GameSession : MonoBehaviour
             
             if (isSessionActive)
             {
-                Debug.Log("[GameSession] ✅ Session started while waiting, proceeding with session end");
+                // Debug.Log("[GameSession] ✅ Session started while waiting, proceeding with session end");
             }
             else
             {
-                Debug.LogWarning("[GameSession] ⚠️ Session did not start in time, proceeding without session end");
+                // Debug.LogWarning("[GameSession] ⚠️ Session did not start in time, proceeding without session end");
             }
         }
 
@@ -730,8 +771,8 @@ public class GameSession : MonoBehaviour
         {
             isSessionActive = false;
             
-            Debug.Log($"[GameSession] Final stats - Score: {score}, Coins: {coinsCollected}, Enemies: {enemiesDefeated}, Deaths: {deathCount}, Duration: {durationSeconds}s");
-            Debug.Log($"[GameSession] Current levelId: {currentLevelId}");
+            // Debug.Log($"[GameSession] Final stats - Score: {score}, Coins: {coinsCollected}, Enemies: {enemiesDefeated}, Deaths: {deathCount}, Duration: {durationSeconds}s");
+            // Debug.Log($"[GameSession] Current levelId: {currentLevelId}");
 
             var payload = new SessionEndRequest
             {
@@ -746,49 +787,49 @@ public class GameSession : MonoBehaviour
             var json = JsonUtility.ToJson(payload);
             APIResponse<string> apiResult = null;
 
-            Debug.Log($"[GameSession] Ending session - sessionId={sessionId}, status={status}");
+            // Debug.Log($"[GameSession] Ending session - sessionId={sessionId}, status={status}");
             yield return APIClient.Post(APIConfig.EndSession(sessionId), json, r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
 
             if (apiResult != null && apiResult.success)
             {
-                Debug.Log("[GameSession] ✅ Session ended successfully on server");
+                // Debug.Log("[GameSession] ✅ Session ended successfully on server");
             }
             else
             {
-                Debug.LogWarning($"[GameSession] ❌ Failed to end session - Status: {apiResult?.statusCode}, Error: {apiResult?.error}");
+                // Debug.LogWarning($"[GameSession] ❌ Failed to end session - Status: {apiResult?.statusCode}, Error: {apiResult?.error}");
             }
 
             if (SessionManager.Instance != null)
             {
                 SessionManager.Instance.ClearSession();
-                Debug.Log("[GameSession] Session cleared from SessionManager");
+                // Debug.Log("[GameSession] Session cleared from SessionManager");
             }
             cachedSessionId = null; // Clear cached sessionId
         }
         else
         {
-            Debug.LogWarning("[GameSession] Session was not active or missing sessionId - skipping session end, but will still process level completion and achievements");
+            // Debug.LogWarning("[GameSession] Session was not active or missing sessionId - skipping session end, but will still process level completion and achievements");
         }
 
         // ALWAYS process level completion and achievements when status is COMPLETED, even if session wasn't active
         // This ensures achievements are checked and notifications shown when player completes a level
         if (status == "COMPLETED")
         {
-            Debug.Log("[GameSession] Status is COMPLETED, proceeding with level progress and achievements...");
+            // Debug.Log("[GameSession] Status is COMPLETED, proceeding with level progress and achievements...");
             
             if (LevelProgressManager.Instance != null && AuthManager.Instance?.CurrentPlayer != null)
             {
                 // Resolve levelId if not already set
                 if (string.IsNullOrEmpty(currentLevelId))
                 {
-                    Debug.Log("[GameSession] currentLevelId is empty, resolving...");
+                    // Debug.Log("[GameSession] currentLevelId is empty, resolving...");
                     yield return StartCoroutine(ResolveLevelId(levelId =>
                     {
                         currentLevelId = levelId;
                     }));
                 }
                 
-                Debug.Log($"[GameSession] Calling CompleteLevel - userId={AuthManager.Instance.CurrentPlayer.userId}, levelId={currentLevelId}");
+                // Debug.Log($"[GameSession] Calling CompleteLevel - userId={AuthManager.Instance.CurrentPlayer.userId}, levelId={currentLevelId}");
                 yield return LevelProgressManager.Instance.CompleteLevel(
                     AuthManager.Instance.CurrentPlayer.userId,
                     currentLevelId,
@@ -796,28 +837,28 @@ public class GameSession : MonoBehaviour
                     coinsCollected,
                     enemiesDefeated,
                     durationSeconds);
-                Debug.Log("[GameSession] ✅ CompleteLevel finished");
+                // Debug.Log("[GameSession] ✅ CompleteLevel finished");
             }
             else
             {
-                Debug.LogWarning($"[GameSession] Cannot complete level - LevelProgressManager={LevelProgressManager.Instance != null}, CurrentPlayer={AuthManager.Instance?.CurrentPlayer != null}");
+                // Debug.LogWarning($"[GameSession] Cannot complete level - LevelProgressManager={LevelProgressManager.Instance != null}, CurrentPlayer={AuthManager.Instance?.CurrentPlayer != null}");
             }
 
             // Refresh achievements and show notifications for new unlocks
             if (AchievementManager.Instance != null)
             {
-                Debug.Log("[GameSession] Refreshing achievements and checking for new unlocks...");
+                // Debug.Log("[GameSession] Refreshing achievements and checking for new unlocks...");
                 yield return AchievementManager.Instance.RefreshUnlocked(true);
-                Debug.Log("[GameSession] ✅ Achievement refresh finished");
+                // Debug.Log("[GameSession] ✅ Achievement refresh finished");
             }
             else
             {
-                Debug.LogWarning("[GameSession] AchievementManager.Instance is null, cannot refresh achievements");
+                // Debug.LogWarning("[GameSession] AchievementManager.Instance is null, cannot refresh achievements");
             }
         }
         else
         {
-            Debug.Log($"[GameSession] Status is {status}, skipping level progress and achievements");
+            // Debug.Log($"[GameSession] Status is {status}, skipping level progress and achievements");
         }
         
         // Reset ending flag after session end is complete
@@ -826,6 +867,7 @@ public class GameSession : MonoBehaviour
 
     public void ProcessPlayerDeath()
     {
+        Debug.Log($"[GameSession] ProcessPlayerDeath: Called - currentLevelId={currentLevelId}, playerLives={playerLives}, scene={SceneManager.GetActiveScene().name}");
         deathCount++;
         
         // Sync death immediately
@@ -833,12 +875,61 @@ public class GameSession : MonoBehaviour
 
         if (playerLives > 1)
         {
+            Debug.Log($"[GameSession] ProcessPlayerDeath: playerLives > 1, updating level then taking life");
+            // Update currentLevel to the level where player died before taking life
+            StartCoroutine(ProcessDeathWithLevelUpdate(true));
+        }
+        else
+        {
+            Debug.Log($"[GameSession] ProcessPlayerDeath: playerLives <= 1, updating level then resetting");
+            // Update currentLevel to the level where player died before resetting
+            StartCoroutine(ProcessDeathWithLevelUpdate(false));
+        }
+    }
+    
+    private IEnumerator ProcessDeathWithLevelUpdate(bool shouldTakeLife)
+    {
+        // Only update currentLevel if player still has lives (will continue in same level)
+        // If gameover, ResetGameSession will reset to Level 1
+        Debug.Log($"[GameSession] ProcessDeathWithLevelUpdate: Starting - currentLevelId={currentLevelId}, shouldTakeLife={shouldTakeLife}");
+        
+        if (shouldTakeLife)
+        {
+            // Update currentLevel to the level where player died (will continue in same level)
+            yield return StartCoroutine(UpdateCurrentLevelOnDeath());
+            Debug.Log($"[GameSession] ProcessDeathWithLevelUpdate: UpdateCurrentLevelOnDeath completed, calling TakeLife()");
             TakeLife();
         }
         else
         {
-            StartCoroutine(OnGameEnd("FAILED"));
-            ResetGameSession();
+            // Don't update level here - ResetGameSession will reset to Level 1
+            Debug.Log($"[GameSession] ProcessDeathWithLevelUpdate: Gameover - will reset to Level 1 in ResetGameSession()");
+            yield return StartCoroutine(ResetGameSession());
+        }
+    }
+    
+    private IEnumerator UpdateCurrentLevelOnDeath()
+    {
+        Debug.Log($"[GameSession] UpdateCurrentLevelOnDeath: Starting - currentLevelId={currentLevelId}");
+        
+        // Update currentLevel to the level where player died
+        if (LevelProgressManager.Instance != null && AuthManager.Instance?.CurrentPlayer != null && !string.IsNullOrEmpty(currentLevelId))
+        {
+            Debug.Log($"[GameSession] UpdateCurrentLevelOnDeath: Updating currentLevel to level where player died (levelId={currentLevelId})");
+            bool updateSuccess = false;
+            yield return LevelProgressManager.Instance.UpdateCurrentLevel(currentLevelId, success => updateSuccess = success);
+            if (updateSuccess)
+            {
+                Debug.Log($"[GameSession] ✅ UpdateCurrentLevelOnDeath: Successfully updated currentLevel to {currentLevelId}");
+            }
+            else
+            {
+                Debug.LogWarning($"[GameSession] ❌ UpdateCurrentLevelOnDeath: Failed to update currentLevel to {currentLevelId}");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[GameSession] UpdateCurrentLevelOnDeath: Cannot update - LevelProgressManager={LevelProgressManager.Instance != null}, AuthManager={AuthManager.Instance?.CurrentPlayer != null}, currentLevelId={currentLevelId}");
         }
     }
 
@@ -856,7 +947,7 @@ public class GameSession : MonoBehaviour
 
         if (apiResult != null && apiResult.success)
         {
-            Debug.Log($"[GameSession] Death synced - Total deaths: {deathCount}");
+            // Debug.Log($"[GameSession] Death synced - Total deaths: {deathCount}");
         }
     }
 
@@ -872,7 +963,7 @@ public class GameSession : MonoBehaviour
     public void AddCoin()
     {
         coinsCollected++;
-        Debug.Log($"[GameSession] Coin collected - Total: {coinsCollected}");
+        // Debug.Log($"[GameSession] Coin collected - Total: {coinsCollected}");
     }
 
     public void AddEnemyDefeated()
@@ -882,20 +973,232 @@ public class GameSession : MonoBehaviour
 
     void TakeLife()
     {
+        Debug.Log($"[GameSession] TakeLife: Called - currentLevelId={currentLevelId}, playerLives before={playerLives}, scene={SceneManager.GetActiveScene().name}");
         playerLives--;
+        if (livesText != null)
+        {
+            livesText.text = playerLives.ToString();
+        }
+        
+        // Update lives on server
+        StartCoroutine(UpdateLivesOnServer(playerLives));
+        
         int currentSceneIndex = SceneManager.GetActiveScene().buildIndex;
+        Debug.Log($"[GameSession] TakeLife: Reloading scene {currentSceneIndex}");
         SceneManager.LoadScene(currentSceneIndex);
-        livesText.text = playerLives.ToString();
     }
 
-    void ResetGameSession()
+    private IEnumerator ResetGameSession()
     {
-        StartCoroutine(OnGameEnd("FAILED"));
-        FindFirstObjectByType<ScenePersist>().ResetScenePersist();
+        Debug.Log($"[GameSession] ResetGameSession: Gameover - currentLevelId={currentLevelId}, scene={SceneManager.GetActiveScene().name}");
+        
+        // Reset local lives to 3 first (before ending session to avoid sending wrong livesRemaining)
+        playerLives = 3;
+        if (livesText != null)
+        {
+            livesText.text = playerLives.ToString();
+        }
+        Debug.Log("[GameSession] ResetGameSession: Reset local lives to 3");
+        
+        // End session first (will send livesRemaining = 3)
+        yield return StartCoroutine(OnGameEnd("FAILED"));
+        
+        // Reset lives to 3 on server (ensure server has correct value)
+        yield return StartCoroutine(UpdateLivesOnServer(3));
+        
+        // Reset currentLevel to Level 1 when gameover
+        // Player should start from Level 1 when they restart after gameover
+        Debug.Log($"[GameSession] ResetGameSession: Resetting currentLevel to Level 1");
+        if (LevelProgressManager.Instance != null && AuthManager.Instance?.CurrentPlayer != null)
+        {
+            // Get Level 1 data
+            yield return LevelProgressManager.Instance.EnsureLevelsCached();
+            var level1Data = LevelProgressManager.Instance.GetLevelDataByNumber(1);
+            
+            if (level1Data != null && !string.IsNullOrEmpty(level1Data._id))
+            {
+                Debug.Log($"[GameSession] ResetGameSession: Updating currentLevel to Level 1 (levelId={level1Data._id})");
+                bool updateSuccess = false;
+                yield return LevelProgressManager.Instance.UpdateCurrentLevel(level1Data._id, success => updateSuccess = success);
+                if (updateSuccess)
+                {
+                    Debug.Log($"[GameSession] ✅ ResetGameSession: Successfully updated currentLevel to Level 1");
+                }
+                else
+                {
+                    Debug.LogWarning($"[GameSession] ❌ ResetGameSession: Failed to update currentLevel to Level 1");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[GameSession] ResetGameSession: Level 1 data not found, cannot update currentLevel");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[GameSession] ResetGameSession: Cannot update currentLevel - LevelProgressManager={LevelProgressManager.Instance != null}, AuthManager={AuthManager.Instance?.CurrentPlayer != null}");
+        }
+        
+        // Reset scene persist
+        var scenePersist = FindFirstObjectByType<ScenePersist>();
+        if (scenePersist != null)
+        {
+            scenePersist.ResetScenePersist();
+        }
+        
+        // Reset session state but DON'T destroy GameSession
+        // GameSession should persist across scenes to handle deaths properly
+        // IMPORTANT: Don't reset currentLevelId here - it was already updated in UpdateCurrentLevelOnDeath()
+        // currentLevelId should remain so player can continue from where they died
+        Debug.Log($"[GameSession] ResetGameSession: Resetting session state but keeping currentLevelId={currentLevelId}");
+        isSessionActive = false;
+        isStartingSession = false;
+        lastStartedSceneName = null;
+        // currentLevelId is NOT reset here - it should persist so player continues from death level
+        cachedSessionId = null;
+        score = 0;
+        coinsCollected = 0;
+        enemiesDefeated = 0;
+        deathCount = 0;
+        
+        // Clear session from SessionManager
+        if (SessionManager.Instance != null)
+        {
+            SessionManager.Instance.ClearSession();
+        }
+        
+        // Load MainMenu (scene 0)
+        Debug.Log("[GameSession] ResetGameSession: Loading MainMenu (scene 0)");
         SceneManager.LoadScene(0);
-        Destroy(gameObject);
+        
+        // Don't destroy GameSession - it will be reused when entering a new level
+        Debug.Log("[GameSession] ResetGameSession: GameSession preserved for next game session");
     }
 
+
+    private IEnumerator LoadLivesFromServer()
+    {
+        if (AuthManager.Instance?.CurrentPlayer == null)
+        {
+            // Debug.LogWarning("[GameSession] LoadLivesFromServer: Not authenticated, using default lives (3)");
+            playerLives = 3;
+            livesText.text = playerLives.ToString();
+            yield break;
+        }
+
+        var userId = AuthManager.Instance.CurrentPlayer.userId;
+        APIResponse<string> apiResult = null;
+        yield return APIClient.Get(APIConfig.GameProfile(userId), r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
+
+        if (apiResult != null && apiResult.success && !string.IsNullOrEmpty(apiResult.data))
+        {
+            bool needsReset = false;
+            try
+            {
+                var profile = JsonUtility.FromJson<GameProfileResponse>(apiResult.data);
+                if (profile != null && profile.gameProfile != null)
+                {
+                    int serverLives = profile.gameProfile.currentLives;
+                    if (serverLives > 0)
+                    {
+                        playerLives = serverLives;
+                        // Debug.Log($"[GameSession] LoadLivesFromServer: Loaded lives from server: {playerLives}");
+                    }
+                    else
+                    {
+                        // If server has 0 or negative lives, reset to 3
+                        // This can happen after gameover if lives weren't properly reset
+                        playerLives = 3;
+                        // Debug.LogWarning($"[GameSession] LoadLivesFromServer: Server has invalid lives ({serverLives}), resetting to 3");
+                        needsReset = true;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Debug.LogError($"[GameSession] LoadLivesFromServer: Failed to parse game profile");
+                playerLives = 3; // Default fallback
+            }
+            
+            // Update lives on server if needed (moved outside try-catch to avoid CS1626)
+            if (needsReset)
+            {
+                yield return StartCoroutine(UpdateLivesOnServer(3));
+            }
+        }
+        else
+        {
+            // Debug.LogWarning("[GameSession] LoadLivesFromServer: Failed to load lives from server, using default (3)");
+            playerLives = 3;
+        }
+
+        // Ensure lives is at least 1 (safety check)
+        if (playerLives < 1)
+        {
+            // Debug.LogWarning($"[GameSession] LoadLivesFromServer: Lives is invalid ({playerLives}), resetting to 3");
+            playerLives = 3;
+            yield return StartCoroutine(UpdateLivesOnServer(3));
+        }
+
+        // Always update livesText after loading (ensure it's displayed)
+        if (livesText != null)
+        {
+            livesText.text = playerLives.ToString();
+            // Debug.Log($"[GameSession] LoadLivesFromServer: Updated livesText to {playerLives}");
+        }
+        else
+        {
+            // Debug.LogWarning("[GameSession] LoadLivesFromServer: livesText is null, cannot update UI");
+        }
+    }
+
+    private IEnumerator UpdateLivesOnServer(int lives)
+    {
+        if (AuthManager.Instance?.CurrentPlayer == null)
+        {
+            // Debug.LogWarning("[GameSession] UpdateLivesOnServer: Not authenticated, cannot update lives");
+            yield break;
+        }
+
+        var userId = AuthManager.Instance.CurrentPlayer.userId;
+        var updateData = new UpdateLivesRequest { lives = lives };
+        var json = JsonUtility.ToJson(updateData);
+        // Debug.Log($"[GameSession] UpdateLivesOnServer: Sending request - lives={lives}, json={json}");
+
+        APIResponse<string> apiResult = null;
+        yield return APIClient.Put(APIConfig.GameProfileLives(userId), json, r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
+
+        if (apiResult != null && apiResult.success)
+        {
+            // Debug.Log($"[GameSession] ✅ UpdateLivesOnServer: Successfully updated lives to {lives}");
+        }
+        else
+        {
+            // Debug.LogWarning($"[GameSession] ❌ UpdateLivesOnServer: Failed to update lives - success={apiResult?.success}, statusCode={apiResult?.statusCode}, error={apiResult?.error}");
+            if (apiResult != null && !string.IsNullOrEmpty(apiResult.data))
+            {
+                // Debug.LogWarning($"[GameSession] UpdateLivesOnServer: Response body: {apiResult.data}");
+            }
+        }
+    }
+
+    [Serializable]
+    private class UpdateLivesRequest
+    {
+        public int lives;
+    }
+
+    [Serializable]
+    private class GameProfileResponse
+    {
+        public GameProfileData gameProfile;
+    }
+
+    [Serializable]
+    private class GameProfileData
+    {
+        public int currentLives;
+    }
 
     private IEnumerator ResolveLevelId(Action<string> onResolved)
     {
@@ -909,19 +1212,19 @@ public class GameSession : MonoBehaviour
         
         while ((scene.buildIndex < 0 || string.IsNullOrEmpty(scene.name)) && waitCount < maxWaitFrames)
         {
-            Debug.Log($"[GameSession] Waiting for scene to load... (frame {waitCount + 1}/{maxWaitFrames}) - scene.name='{scene.name}', buildIndex={scene.buildIndex}");
+            // Debug.Log($"[GameSession] Waiting for scene to load... (frame {waitCount + 1}/{maxWaitFrames}) - scene.name='{scene.name}', buildIndex={scene.buildIndex}");
             yield return null; // Wait one frame
             scene = SceneManager.GetActiveScene();
             waitCount++;
         }
 
         // Log early to debug
-        Debug.Log($"[GameSession] ResolveLevelId called - scene.name='{scene.name}', buildIndex={scene.buildIndex}");
+        Debug.Log($"[GameSession] ResolveLevelId: Called - scene.name='{scene.name}', buildIndex={scene.buildIndex}");
 
         // Skip invalid scenes (after waiting)
         if (scene.buildIndex < 0 || string.IsNullOrEmpty(scene.name))
         {
-            Debug.LogError($"[GameSession] ⚠️ Cannot resolve levelId for invalid scene after waiting - scene.name='{scene.name}', buildIndex={scene.buildIndex}");
+            Debug.LogError($"[GameSession] ⚠️ ResolveLevelId: Cannot resolve levelId for invalid scene after waiting - scene.name='{scene.name}', buildIndex={scene.buildIndex}");
             onResolved?.Invoke(null);
             yield break;
         }
@@ -929,10 +1232,11 @@ public class GameSession : MonoBehaviour
         if (LevelProgressManager.Instance != null)
         {
             yield return LevelProgressManager.Instance.ResolveLevelId(scene, id => resolvedId = id);
+            Debug.Log($"[GameSession] ResolveLevelId: First attempt - resolvedId={resolvedId}");
         }
         else
         {
-            Debug.LogError("[GameSession] ❌ LevelProgressManager.Instance is null!");
+            Debug.LogError("[GameSession] ❌ ResolveLevelId: LevelProgressManager.Instance is null!");
             onResolved?.Invoke(null);
             yield break;
         }
@@ -941,8 +1245,8 @@ public class GameSession : MonoBehaviour
         // If we can't resolve, we need to wait for levels to be cached or handle the error
         if (string.IsNullOrEmpty(resolvedId))
         {
-            Debug.LogWarning($"[GameSession] ❌ Failed to resolve levelId for scene: {scene.name} (buildIndex: {scene.buildIndex})");
-            Debug.LogWarning("[GameSession] This usually means levels haven't been cached from server yet. Retrying...");
+            Debug.LogWarning($"[GameSession] ❌ ResolveLevelId: Failed to resolve levelId for scene: {scene.name} (buildIndex: {scene.buildIndex})");
+            Debug.LogWarning("[GameSession] ResolveLevelId: This usually means levels haven't been cached from server yet. Retrying...");
             
             // Wait a bit longer and retry once more
             yield return new WaitForSeconds(1f);
@@ -950,16 +1254,21 @@ public class GameSession : MonoBehaviour
             if (LevelProgressManager.Instance != null)
             {
                 yield return LevelProgressManager.Instance.ResolveLevelId(scene, id => resolvedId = id);
+                Debug.Log($"[GameSession] ResolveLevelId: Retry attempt - resolvedId={resolvedId}");
             }
             
             if (string.IsNullOrEmpty(resolvedId))
             {
-                Debug.LogError("[GameSession] ❌ Still failed to resolve levelId after retry. Cannot start session without valid levelId.");
+                Debug.LogError("[GameSession] ❌ ResolveLevelId: Still failed to resolve levelId after retry. Cannot start session without valid levelId.");
             }
             else
             {
-                Debug.Log($"[GameSession] ✅ Successfully resolved levelId after retry: {resolvedId}");
+                Debug.Log($"[GameSession] ✅ ResolveLevelId: Successfully resolved levelId after retry: {resolvedId}");
             }
+        }
+        else
+        {
+            Debug.Log($"[GameSession] ✅ ResolveLevelId: Successfully resolved levelId: {resolvedId}");
         }
 
         onResolved?.Invoke(resolvedId);
@@ -1007,3 +1316,4 @@ public class GameSession : MonoBehaviour
         public string levelId;
     }
 }
+

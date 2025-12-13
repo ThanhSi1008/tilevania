@@ -149,6 +149,8 @@ public class MainMenuManager : MonoBehaviour
         LevelProgressManager.LevelData currentLevelData = null;
         yield return LevelProgressManager.Instance.GetCurrentLevel(data => currentLevelData = data);
 
+        Debug.Log($"[MainMenuManager] Step 1 Result: currentLevelData={(currentLevelData != null ? $"{currentLevelData.levelName} (Level {currentLevelData.levelNumber})" : "NULL")}");
+
         LevelProgressManager.LevelData levelToLoad = currentLevelData;
 
         // If no current level saved, get next level to play (highest completed + 1, or Level 1)
@@ -156,6 +158,7 @@ public class MainMenuManager : MonoBehaviour
         {
             Debug.Log("[MainMenuManager] Step 2: No current level saved, determining next level to play...");
             yield return LevelProgressManager.Instance.GetNextLevelToPlay(data => levelToLoad = data);
+            Debug.Log($"[MainMenuManager] Step 2 Result: levelToLoad={(levelToLoad != null ? $"{levelToLoad.levelName} (Level {levelToLoad.levelNumber})" : "NULL")}");
         }
         else
         {

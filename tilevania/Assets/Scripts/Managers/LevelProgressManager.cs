@@ -185,7 +185,7 @@ public class LevelProgressManager : MonoBehaviour
         }
     }
 
-    private IEnumerator EnsureLevelsCached()
+    public IEnumerator EnsureLevelsCached()
     {
         // Wait if another coroutine is already fetching
         int waitCount = 0;
@@ -409,35 +409,98 @@ public class LevelProgressManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Get the next level to play (highest completed + 1, or Level 1 if none completed).
+    /// Get the next level to play (first uncompleted level, or Level 1 if all completed or none started).
     /// Returns level data or null if error.
     /// </summary>
     public IEnumerator GetNextLevelToPlay(Action<LevelData> onResult)
     {
         Debug.Log("[LevelProgress] GetNextLevelToPlay: Starting...");
         
-        int highestCompleted = 0;
-        yield return GetHighestCompletedLevelNumber(level => highestCompleted = level);
-
-        // Next level is highest completed + 1
-        int nextLevelNumber = highestCompleted + 1;
-        Debug.Log($"[LevelProgress] GetNextLevelToPlay: highestCompleted={highestCompleted}, nextLevelNumber={nextLevelNumber}");
+        if (!HasAuth())
+        {
+            Debug.LogWarning("[LevelProgress] GetNextLevelToPlay: Not authenticated");
+            onResult?.Invoke(null);
+            yield break;
+        }
 
         // Ensure levels are cached
         yield return EnsureLevelsCached();
 
-        // Get level data for next level
-        var nextLevelData = GetLevelDataByNumber(nextLevelNumber);
+        // Get all level progress to find first uncompleted level
+        var userId = AuthManager.Instance.CurrentPlayer.userId;
+        APIResponse<string> apiResult = null;
+        yield return APIClient.Get(APIConfig.LevelProgress(userId), r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
+
+        HashSet<int> completedLevelNumbers = new HashSet<int>();
+        
+        if (apiResult != null && apiResult.success && !string.IsNullOrEmpty(apiResult.data))
+        {
+            try
+            {
+                var parsed = JsonUtility.FromJson<LevelProgressResponse>(apiResult.data);
+                if (parsed != null && parsed.levelProgresses != null && parsed.levelProgresses.Length > 0)
+                {
+                    foreach (var progress in parsed.levelProgresses)
+                    {
+                        if (progress.isCompleted && progress.levelId != null)
+                        {
+                            completedLevelNumbers.Add(progress.levelId.levelNumber);
+                        }
+                    }
+                    Debug.Log($"[LevelProgress] GetNextLevelToPlay: Found {completedLevelNumbers.Count} completed levels: {string.Join(", ", completedLevelNumbers)}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[LevelProgress] GetNextLevelToPlay: Failed to parse level progress: {ex.Message}");
+            }
+        }
+
+        // Find first uncompleted level, starting from Level 1
+        LevelData nextLevelData = null;
+        int maxLevelNumber = 0;
+        
+        // Find max level number from cache
+        foreach (var kvp in levelNumberToLevelId)
+        {
+            maxLevelNumber = Mathf.Max(maxLevelNumber, kvp.Key);
+        }
+        
+        Debug.Log($"[LevelProgress] GetNextLevelToPlay: Checking levels 1 to {maxLevelNumber} for first uncompleted level...");
+        
+        for (int levelNum = 1; levelNum <= maxLevelNumber; levelNum++)
+        {
+            if (!completedLevelNumbers.Contains(levelNum))
+            {
+                nextLevelData = GetLevelDataByNumber(levelNum);
+                if (nextLevelData != null)
+                {
+                    Debug.Log($"[LevelProgress] ✅ GetNextLevelToPlay: Found first uncompleted level: {nextLevelData.levelName} (Level {nextLevelData.levelNumber})");
+                    onResult?.Invoke(nextLevelData);
+                    yield break;
+                }
+            }
+        }
+
+        // If all levels are completed, return the last level (or Level 1 if no levels found)
         if (nextLevelData == null)
         {
-            Debug.LogWarning($"[LevelProgress] GetNextLevelToPlay: Level {nextLevelNumber} not found, falling back to Level 1");
-            nextLevelData = GetLevelDataByNumber(1);
+            Debug.Log("[LevelProgress] GetNextLevelToPlay: All levels completed, returning last level or Level 1");
+            if (maxLevelNumber > 0)
+            {
+                nextLevelData = GetLevelDataByNumber(maxLevelNumber);
+            }
             if (nextLevelData == null)
             {
-                Debug.LogError("[LevelProgress] GetNextLevelToPlay: Even Level 1 not found! Returning null");
-                onResult?.Invoke(null);
-                yield break;
+                nextLevelData = GetLevelDataByNumber(1);
             }
+        }
+
+        if (nextLevelData == null)
+        {
+            Debug.LogError("[LevelProgress] GetNextLevelToPlay: No levels found! Returning null");
+            onResult?.Invoke(null);
+            yield break;
         }
 
         Debug.Log($"[LevelProgress] ✅ GetNextLevelToPlay: Returning {nextLevelData.levelName} (Level {nextLevelData.levelNumber})");
@@ -520,7 +583,13 @@ public class LevelProgressManager : MonoBehaviour
                 
                 if (profile != null && profile.gameProfile != null)
                 {
-                    if (profile.gameProfile.currentLevel != null)
+                    // Check if currentLevel exists and is not an empty object
+                    // Unity JsonUtility may create empty objects with default values when field is null in JSON
+                    bool hasValidCurrentLevel = profile.gameProfile.currentLevel != null &&
+                        (!string.IsNullOrEmpty(profile.gameProfile.currentLevel._id) || 
+                         profile.gameProfile.currentLevel.levelNumber > 0);
+                    
+                    if (hasValidCurrentLevel)
                     {
                         Debug.Log($"[LevelProgress] GetCurrentLevel: currentLevel._id='{profile.gameProfile.currentLevel._id}', levelNumber={profile.gameProfile.currentLevel.levelNumber}, levelName='{profile.gameProfile.currentLevel.levelName}'");
                         
@@ -550,15 +619,15 @@ public class LevelProgressManager : MonoBehaviour
                             }
                         }
                         
-                        // If still not found, log warning
+                        // If still not found, log warning and treat as null
                         if (levelData == null)
                         {
-                            Debug.LogWarning($"[LevelProgress] GetCurrentLevel: Level data not found in cache - _id='{profile.gameProfile.currentLevel._id}', levelNumber={profile.gameProfile.currentLevel.levelNumber}");
+                            Debug.LogWarning($"[LevelProgress] GetCurrentLevel: Level data not found in cache - _id='{profile.gameProfile.currentLevel._id}', levelNumber={profile.gameProfile.currentLevel.levelNumber}. Treating as null.");
                         }
                     }
                     else
                     {
-                        Debug.Log("[LevelProgress] GetCurrentLevel: currentLevel is null in GameProfile");
+                        Debug.Log("[LevelProgress] GetCurrentLevel: currentLevel is null or empty in GameProfile (no valid _id or levelNumber)");
                     }
                 }
                 else

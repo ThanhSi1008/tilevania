@@ -32,25 +32,35 @@ const updateGameProfile = async (req, res) => {
     const { userId } = req.params;
     const updateData = req.body;
 
+    console.log(`[GameProfile] Update game profile - userId: ${userId}, updateData:`, JSON.stringify(updateData));
+    
+    // Log if currentLevel is being updated
+    if (updateData.currentLevel) {
+      console.log(`[GameProfile] ⚠️ Updating currentLevel to: ${updateData.currentLevel} for userId: ${userId}`);
+    }
+
     const gameProfile = await GameProfile.findOneAndUpdate(
       { userId },
       updateData,
       { new: true, runValidators: true }
-    );
+    ).populate('currentLevel', '_id levelName levelNumber');
 
     if (!gameProfile) {
+      console.log(`[GameProfile] ❌ Game profile not found for userId: ${userId}`);
       return res.status(404).json({
         error: 'Not Found',
         message: 'Game profile not found',
       });
     }
 
+    console.log(`[GameProfile] ✅ Game profile updated successfully - userId: ${userId}, currentLevel: ${gameProfile.currentLevel ? `${gameProfile.currentLevel.levelName} (${gameProfile.currentLevel.levelNumber})` : 'null'}`);
+
     return res.status(200).json({
       message: 'Game profile updated successfully',
       gameProfile,
     });
   } catch (error) {
-    console.error('Update game profile error:', error);
+    console.error('[GameProfile] ❌ Update game profile error:', error);
     return res.status(500).json({
       error: 'Internal Server Error',
       message: error.message,
