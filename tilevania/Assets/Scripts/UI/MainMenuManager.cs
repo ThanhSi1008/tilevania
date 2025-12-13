@@ -135,6 +135,8 @@ public class MainMenuManager : MonoBehaviour
 
     private IEnumerator LoadNextLevelCoroutine()
     {
+        Debug.Log("[MainMenuManager] LoadNextLevelCoroutine: Starting...");
+        
         // Get LevelProgressManager instance
         if (LevelProgressManager.Instance == null)
         {
@@ -143,6 +145,7 @@ public class MainMenuManager : MonoBehaviour
         }
 
         // First, try to get current level from GameProfile (saved progress)
+        Debug.Log("[MainMenuManager] Step 1: Getting current level from GameProfile...");
         LevelProgressManager.LevelData currentLevelData = null;
         yield return LevelProgressManager.Instance.GetCurrentLevel(data => currentLevelData = data);
 
@@ -151,23 +154,24 @@ public class MainMenuManager : MonoBehaviour
         // If no current level saved, get next level to play (highest completed + 1, or Level 1)
         if (levelToLoad == null)
         {
-            Debug.Log("[MainMenuManager] No current level saved, determining next level to play...");
+            Debug.Log("[MainMenuManager] Step 2: No current level saved, determining next level to play...");
             yield return LevelProgressManager.Instance.GetNextLevelToPlay(data => levelToLoad = data);
         }
         else
         {
-            Debug.Log($"[MainMenuManager] Found saved current level: {levelToLoad.levelName} (Level {levelToLoad.levelNumber})");
+            Debug.Log($"[MainMenuManager] ✅ Step 2: Found saved current level: {levelToLoad.levelName} (Level {levelToLoad.levelNumber})");
         }
 
         if (levelToLoad == null)
         {
-            Debug.LogWarning("[MainMenuManager] Could not determine level to load, using default: Level 1");
+            Debug.LogWarning("[MainMenuManager] Step 3: Could not determine level to load, using default: Level 1");
             // Fallback to default scene
             if (string.IsNullOrEmpty(gameplaySceneName))
             {
                 Debug.LogError("Gameplay scene name is not set in MainMenuManager!");
                 yield break;
             }
+            Debug.Log($"[MainMenuManager] Loading default scene: {gameplaySceneName}");
             SceneManager.LoadScene(gameplaySceneName);
             yield break;
         }
@@ -178,16 +182,17 @@ public class MainMenuManager : MonoBehaviour
         {
             // Fallback to levelName if sceneName is not available
             sceneToLoad = levelToLoad.levelName;
+            Debug.Log($"[MainMenuManager] Using levelName as sceneName: {sceneToLoad}");
         }
 
         if (string.IsNullOrEmpty(sceneToLoad))
         {
-            Debug.LogError($"[MainMenuManager] Level {levelToLoad.levelNumber} has no sceneName or levelName!");
+            Debug.LogError($"[MainMenuManager] Level {levelToLoad.levelNumber} has no sceneName or levelName! Using default: {gameplaySceneName}");
             // Fallback to default
             sceneToLoad = gameplaySceneName;
         }
 
-        Debug.Log($"[MainMenuManager] Loading level: {sceneToLoad} (Level {levelToLoad.levelNumber})");
+        Debug.Log($"[MainMenuManager] ✅ FINAL: Loading level scene: '{sceneToLoad}' (Level {levelToLoad.levelNumber}, levelName: {levelToLoad.levelName})");
         SceneManager.LoadScene(sceneToLoad);
     }
 }

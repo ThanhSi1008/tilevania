@@ -414,12 +414,14 @@ public class LevelProgressManager : MonoBehaviour
     /// </summary>
     public IEnumerator GetNextLevelToPlay(Action<LevelData> onResult)
     {
+        Debug.Log("[LevelProgress] GetNextLevelToPlay: Starting...");
+        
         int highestCompleted = 0;
         yield return GetHighestCompletedLevelNumber(level => highestCompleted = level);
 
         // Next level is highest completed + 1
         int nextLevelNumber = highestCompleted + 1;
-        Debug.Log($"[LevelProgress] Next level to play: {nextLevelNumber} (highest completed: {highestCompleted})");
+        Debug.Log($"[LevelProgress] GetNextLevelToPlay: highestCompleted={highestCompleted}, nextLevelNumber={nextLevelNumber}");
 
         // Ensure levels are cached
         yield return EnsureLevelsCached();
@@ -428,10 +430,17 @@ public class LevelProgressManager : MonoBehaviour
         var nextLevelData = GetLevelDataByNumber(nextLevelNumber);
         if (nextLevelData == null)
         {
-            Debug.LogWarning($"[LevelProgress] Level {nextLevelNumber} not found, falling back to Level 1");
+            Debug.LogWarning($"[LevelProgress] GetNextLevelToPlay: Level {nextLevelNumber} not found, falling back to Level 1");
             nextLevelData = GetLevelDataByNumber(1);
+            if (nextLevelData == null)
+            {
+                Debug.LogError("[LevelProgress] GetNextLevelToPlay: Even Level 1 not found! Returning null");
+                onResult?.Invoke(null);
+                yield break;
+            }
         }
 
+        Debug.Log($"[LevelProgress] ✅ GetNextLevelToPlay: Returning {nextLevelData.levelName} (Level {nextLevelData.levelNumber})");
         onResult?.Invoke(nextLevelData);
     }
 
@@ -447,25 +456,33 @@ public class LevelProgressManager : MonoBehaviour
     {
         if (!HasAuth() || string.IsNullOrEmpty(levelId))
         {
+            Debug.LogWarning($"[LevelProgress] UpdateCurrentLevel: Cannot update - HasAuth={HasAuth()}, levelId={levelId}");
             onResult?.Invoke(false);
             yield break;
         }
 
         var userId = AuthManager.Instance.CurrentPlayer.userId;
+        Debug.Log($"[LevelProgress] UpdateCurrentLevel: Updating currentLevel to levelId={levelId} for userId={userId}");
+        
         var updateData = new { currentLevel = levelId };
         var json = JsonUtility.ToJson(updateData);
+        Debug.Log($"[LevelProgress] UpdateCurrentLevel: Request body: {json}");
 
         APIResponse<string> apiResult = null;
         yield return APIClient.Put(APIConfig.GameProfile(userId), json, r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
 
         if (apiResult != null && apiResult.success)
         {
-            Debug.Log($"[LevelProgress] Updated currentLevel to {levelId}");
+            Debug.Log($"[LevelProgress] ✅ UpdateCurrentLevel: Successfully updated currentLevel to {levelId}");
             onResult?.Invoke(true);
         }
         else
         {
-            Debug.LogWarning($"[LevelProgress] Failed to update currentLevel: {apiResult?.error}");
+            Debug.LogWarning($"[LevelProgress] ❌ UpdateCurrentLevel: Failed to update currentLevel - success={apiResult?.success}, statusCode={apiResult?.statusCode}, error={apiResult?.error}");
+            if (apiResult != null && !string.IsNullOrEmpty(apiResult.data))
+            {
+                Debug.LogWarning($"[LevelProgress] UpdateCurrentLevel: Response data: {apiResult.data}");
+            }
             onResult?.Invoke(false);
         }
     }
@@ -477,41 +494,90 @@ public class LevelProgressManager : MonoBehaviour
     {
         if (!HasAuth())
         {
+            Debug.Log("[LevelProgress] GetCurrentLevel: Not authenticated");
             onResult?.Invoke(null);
             yield break;
         }
 
         var userId = AuthManager.Instance.CurrentPlayer.userId;
+        Debug.Log($"[LevelProgress] GetCurrentLevel: Fetching game profile for userId={userId}");
+        
         APIResponse<string> apiResult = null;
         yield return APIClient.Get(APIConfig.GameProfile(userId), r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
 
         if (apiResult != null && apiResult.success && !string.IsNullOrEmpty(apiResult.data))
         {
+            Debug.Log($"[LevelProgress] GetCurrentLevel: API response received. Data length: {apiResult.data.Length}");
+            Debug.Log($"[LevelProgress] GetCurrentLevel: Raw response: {apiResult.data}");
+            
             // Ensure levels are cached before parsing (moved outside try-catch to avoid CS1626)
             yield return EnsureLevelsCached();
             
             try
             {
                 var profile = JsonUtility.FromJson<GameProfileResponse>(apiResult.data);
-                if (profile != null && profile.gameProfile != null && profile.gameProfile.currentLevel != null)
+                Debug.Log($"[LevelProgress] GetCurrentLevel: Parsed profile - profile={profile != null}, gameProfile={profile?.gameProfile != null}, currentLevel={profile?.gameProfile?.currentLevel != null}");
+                
+                if (profile != null && profile.gameProfile != null)
                 {
-                    // Get level data by levelId
-                    var levelData = GetLevelData(profile.gameProfile.currentLevel._id);
-                    if (levelData != null)
+                    if (profile.gameProfile.currentLevel != null)
                     {
-                        Debug.Log($"[LevelProgress] Found currentLevel: {levelData.levelName} (Level {levelData.levelNumber})");
-                        onResult?.Invoke(levelData);
-                        yield break;
+                        Debug.Log($"[LevelProgress] GetCurrentLevel: currentLevel._id='{profile.gameProfile.currentLevel._id}', levelNumber={profile.gameProfile.currentLevel.levelNumber}, levelName='{profile.gameProfile.currentLevel.levelName}'");
+                        
+                        LevelData levelData = null;
+                        
+                        // Try to get level data by _id first
+                        if (!string.IsNullOrEmpty(profile.gameProfile.currentLevel._id))
+                        {
+                            levelData = GetLevelData(profile.gameProfile.currentLevel._id);
+                            if (levelData != null)
+                            {
+                                Debug.Log($"[LevelProgress] ✅ GetCurrentLevel: Found currentLevel by _id: {levelData.levelName} (Level {levelData.levelNumber})");
+                                onResult?.Invoke(levelData);
+                                yield break;
+                            }
+                        }
+                        
+                        // Fallback: Try to get level data by levelNumber
+                        if (levelData == null && profile.gameProfile.currentLevel.levelNumber > 0)
+                        {
+                            levelData = GetLevelDataByNumber(profile.gameProfile.currentLevel.levelNumber);
+                            if (levelData != null)
+                            {
+                                Debug.Log($"[LevelProgress] ✅ GetCurrentLevel: Found currentLevel by levelNumber: {levelData.levelName} (Level {levelData.levelNumber})");
+                                onResult?.Invoke(levelData);
+                                yield break;
+                            }
+                        }
+                        
+                        // If still not found, log warning
+                        if (levelData == null)
+                        {
+                            Debug.LogWarning($"[LevelProgress] GetCurrentLevel: Level data not found in cache - _id='{profile.gameProfile.currentLevel._id}', levelNumber={profile.gameProfile.currentLevel.levelNumber}");
+                        }
                     }
+                    else
+                    {
+                        Debug.Log("[LevelProgress] GetCurrentLevel: currentLevel is null in GameProfile");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"[LevelProgress] GetCurrentLevel: Failed to parse profile structure - profile={profile != null}, gameProfile={profile?.gameProfile != null}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[LevelProgress] Failed to parse game profile: {ex.Message}");
+                Debug.LogError($"[LevelProgress] GetCurrentLevel: Failed to parse game profile: {ex.Message}");
+                Debug.LogError($"[LevelProgress] GetCurrentLevel: Stack trace: {ex.StackTrace}");
             }
         }
+        else
+        {
+            Debug.LogWarning($"[LevelProgress] GetCurrentLevel: API call failed - success={apiResult?.success}, hasData={!string.IsNullOrEmpty(apiResult?.data)}, statusCode={apiResult?.statusCode}, error={apiResult?.error}");
+        }
 
-        Debug.Log("[LevelProgress] No currentLevel set in GameProfile");
+        Debug.Log("[LevelProgress] GetCurrentLevel: No currentLevel set in GameProfile, returning null");
         onResult?.Invoke(null);
     }
 
