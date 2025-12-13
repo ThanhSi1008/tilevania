@@ -1,4 +1,5 @@
 const { LevelProgress, GameProfile } = require('../models');
+const { checkAchievements } = require('./achievementController');
 
 // Get level progress
 const getLevelProgress = async (req, res) => {
@@ -140,6 +141,30 @@ const completeLevel = async (req, res) => {
     }
 
     await levelProgress.save();
+
+    // Update game profile with level completion stats
+    const gameProfile = await GameProfile.findOne({ userId });
+    if (gameProfile) {
+      if (score !== undefined) {
+        gameProfile.totalScore += score;
+        if (score > gameProfile.highestScoreAchieved) {
+          gameProfile.highestScoreAchieved = score;
+        }
+      }
+      if (coins !== undefined) {
+        gameProfile.totalCoinsCollected += coins;
+      }
+      if (enemies !== undefined) {
+        gameProfile.totalEnemiesDefeated += enemies;
+      }
+      if (time !== undefined) {
+        gameProfile.totalPlayTime += time;
+      }
+      await gameProfile.save();
+
+      // Check and unlock achievements after updating game profile
+      await checkAchievements(userId);
+    }
 
     return res.status(200).json({
       message: 'Level completed successfully',

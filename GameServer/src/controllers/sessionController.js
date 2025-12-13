@@ -1,4 +1,5 @@
 const { GameSession, GameProfile, LevelProgress } = require('../models');
+const { checkAchievements } = require('./achievementController');
 
 // Start game session
 const startSession = async (req, res) => {
@@ -133,6 +134,11 @@ const endSession = async (req, res) => {
       }
 
       await gameProfile.save();
+
+      // Check and unlock achievements after updating game profile
+      if (session.sessionStatus === 'COMPLETED') {
+        await checkAchievements(session.userId);
+      }
     }
 
     // Update level progress if level was completed

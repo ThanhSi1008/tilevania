@@ -99,10 +99,27 @@ public class AchievementManager : MonoBehaviour
                 {
                     unlocked.AddRange(parsed.achievements);
                     Debug.Log($"[Achievement] ✅ Fetched {unlocked.Count} unlocked achievements");
+                    
+                    // Debug: Log achievement details to verify structure
+                    foreach (var item in unlocked)
+                    {
+                        if (item?.achievementId != null)
+                        {
+                            Debug.Log($"[Achievement] Found achievement: {item.achievementId.name} (id: {item.achievementId._id})");
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[Achievement] ⚠️ Achievement item has null achievementId! Item id: {item?._id}");
+                        }
+                    }
                 }
                 else
                 {
                     Debug.Log("[Achievement] No achievements in response");
+                    if (parsed == null)
+                    {
+                        Debug.LogWarning($"[Achievement] ⚠️ Parsed response is null. Raw data: {apiResult.data}");
+                    }
                 }
 
                 if (showNotifications)
@@ -111,13 +128,23 @@ public class AchievementManager : MonoBehaviour
                     foreach (var item in unlocked)
                     {
                         var id = item?.achievementId?._id;
-                        if (!string.IsNullOrEmpty(id) && !previousUnlockedIds.Contains(id))
+                        if (string.IsNullOrEmpty(id))
+                        {
+                            Debug.LogWarning($"[Achievement] ⚠️ Skipping achievement with null/empty id. Item: {item?._id}");
+                            continue;
+                        }
+                        
+                        if (!previousUnlockedIds.Contains(id))
                         {
                             newUnlocks++;
                             var name = item.achievementId?.name ?? "Unknown";
                             var desc = item.achievementId?.description ?? "";
                             Debug.Log($"[Achievement] 🎉 NEW ACHIEVEMENT UNLOCKED: {name} - {desc}");
                             ShowNotification(name, desc);
+                        }
+                        else
+                        {
+                            Debug.Log($"[Achievement] Achievement {id} was already unlocked, skipping notification");
                         }
                     }
                     
@@ -127,7 +154,7 @@ public class AchievementManager : MonoBehaviour
                     }
                     else
                     {
-                        Debug.Log("[Achievement] No new achievements to show");
+                        Debug.Log($"[Achievement] No new achievements to show (previous: {previousUnlockedIds.Count}, current: {unlocked.Count})");
                     }
                 }
             }
