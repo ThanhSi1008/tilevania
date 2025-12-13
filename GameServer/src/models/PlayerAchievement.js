@@ -14,7 +14,7 @@ const playerAchievementSchema = new mongoose.Schema(
     },
     unlockedAt: {
       type: Date,
-      default: Date.now,
+      default: null, // null for locked achievements, Date for unlocked
     },
     progress: {
       type: Number,

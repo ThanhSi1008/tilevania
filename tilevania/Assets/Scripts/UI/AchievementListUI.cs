@@ -35,9 +35,18 @@ public class AchievementListUI : MonoBehaviour
             var item = go.GetComponent<AchievementListUIItem>();
             if (item != null)
             {
-                var unlocked = manager.UnlockedAchievements != null &&
-                               manager.UnlockedAchievements.Any(p => p.achievementId != null && p.achievementId._id == ach._id);
-                item.SetData(ach.name, ach.description, ach.points, unlocked);
+                var unlockedAchievement = manager.UnlockedAchievements != null
+                    ? manager.UnlockedAchievements.FirstOrDefault(p => p.achievementId != null && p.achievementId._id == ach._id)
+                    : null;
+                
+                // Determine unlocked status: progress >= 100 OR unlockedAt is not null
+                bool unlocked = unlockedAchievement != null && 
+                               (unlockedAchievement.progress >= 100 || !string.IsNullOrEmpty(unlockedAchievement.unlockedAt));
+                int progress = unlockedAchievement != null ? unlockedAchievement.progress : 0;
+                
+                // Server now returns progress for ALL achievements (including locked ones)
+                // So unlockedAchievement should always be found, but we check progress to determine unlock status
+                item.SetData(ach.name, ach.description, ach.points, unlocked, progress, ach.condition);
             }
         }
 

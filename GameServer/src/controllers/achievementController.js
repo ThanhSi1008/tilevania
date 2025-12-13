@@ -23,13 +23,53 @@ const getPlayerAchievements = async (req, res) => {
   try {
     const { userId } = req.params;
 
+    // Get all achievements
+    const allAchievements = await Achievement.find().sort({ rarity: -1, createdAt: 1 });
+    
+    // Get player's achievement progress
     const playerAchievements = await PlayerAchievement.find({ userId })
-      .populate('achievementId')
-      .sort({ unlockedAt: -1 });
+      .populate('achievementId');
+    
+    // Create a map for quick lookup
+    const progressMap = new Map();
+    playerAchievements.forEach(pa => {
+      if (pa.achievementId && pa.achievementId._id) {
+        progressMap.set(pa.achievementId._id.toString(), pa);
+      }
+    });
+
+    // Get game profile to calculate progress for achievements without records
+    const gameProfile = await GameProfile.findOne({ userId });
+    if (!gameProfile) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: 'Game profile not found',
+      });
+    }
+
+    // Build response with all achievements and their progress
+    const achievementsWithProgress = allAchievements.map(achievement => {
+      const existing = progressMap.get(achievement._id.toString());
+      
+      // If PlayerAchievement exists, use it
+      if (existing) {
+        return existing;
+      }
+      
+      // If no PlayerAchievement exists, calculate progress on-the-fly
+      const { currentProgress } = calculateProgress(achievement.condition, gameProfile);
+      
+      return {
+        _id: null, // No PlayerAchievement record yet
+        unlockedAt: null,
+        progress: currentProgress,
+        achievementId: achievement,
+      };
+    });
 
     return res.status(200).json({
-      count: playerAchievements.length,
-      achievements: playerAchievements,
+      count: achievementsWithProgress.length,
+      achievements: achievementsWithProgress,
     });
   } catch (error) {
     console.error('Get player achievements error:', error);
@@ -93,6 +133,53 @@ const unlockAchievement = async (req, res) => {
   }
 };
 
+// Calculate progress for an achievement based on condition
+const calculateProgress = (condition, gameProfile) => {
+  let currentProgress = 0;
+  let shouldUnlock = false;
+
+  switch (condition) {
+    case 'FIRST_KILL':
+      currentProgress = gameProfile.totalEnemiesDefeated >= 1 ? 100 : 0;
+      shouldUnlock = currentProgress >= 100;
+      break;
+    case 'COIN_COLLECTOR_100':
+      currentProgress = Math.min(100, Math.floor((gameProfile.totalCoinsCollected / 100) * 100));
+      shouldUnlock = gameProfile.totalCoinsCollected >= 100;
+      break;
+    case 'COIN_COLLECTOR_500':
+      currentProgress = Math.min(100, Math.floor((gameProfile.totalCoinsCollected / 500) * 100));
+      shouldUnlock = gameProfile.totalCoinsCollected >= 500;
+      break;
+    case 'SCORE_MASTER_1000':
+      currentProgress = Math.min(100, Math.floor((gameProfile.totalScore / 1000) * 100));
+      shouldUnlock = gameProfile.totalScore >= 1000;
+      break;
+    case 'SCORE_MASTER_5000':
+      currentProgress = Math.min(100, Math.floor((gameProfile.totalScore / 5000) * 100));
+      shouldUnlock = gameProfile.totalScore >= 5000;
+      break;
+    case 'KILLER_100':
+      currentProgress = Math.min(100, Math.floor((gameProfile.totalEnemiesDefeated / 100) * 100));
+      shouldUnlock = gameProfile.totalEnemiesDefeated >= 100;
+      break;
+    case 'PLAYTIME_HOUR':
+      currentProgress = Math.min(100, Math.floor((gameProfile.totalPlayTime / 3600) * 100));
+      shouldUnlock = gameProfile.totalPlayTime >= 3600;
+      break;
+    case 'PLAYTIME_DAY':
+      currentProgress = Math.min(100, Math.floor((gameProfile.totalPlayTime / 86400) * 100));
+      shouldUnlock = gameProfile.totalPlayTime >= 86400;
+      break;
+    default:
+      currentProgress = 0;
+      shouldUnlock = false;
+      break;
+  }
+
+  return { currentProgress, shouldUnlock };
+};
+
 // Auto-check and unlock achievements
 const checkAchievements = async (userId) => {
   try {
@@ -102,58 +189,43 @@ const checkAchievements = async (userId) => {
     // List of achievements to check
     const achievements = await Achievement.find();
     const unlockedAchievements = await PlayerAchievement.find({ userId });
-    const unlockedIds = new Set(unlockedAchievements.map(a => a.achievementId.toString()));
+    const unlockedMap = new Map();
+    unlockedAchievements.forEach(a => {
+      unlockedMap.set(a.achievementId.toString(), a);
+    });
 
     for (const achievement of achievements) {
-      // Skip if already unlocked
-      if (unlockedIds.has(achievement._id.toString())) continue;
+      const achievementIdStr = achievement._id.toString();
+      const existing = unlockedMap.get(achievementIdStr);
+      const isUnlocked = existing && existing.progress >= 100;
 
-      let shouldUnlock = false;
+      // Calculate current progress (0-100)
+      const { currentProgress, shouldUnlock } = calculateProgress(achievement.condition, gameProfile);
 
-      // Check conditions
-      switch (achievement.condition) {
-        case 'FIRST_KILL':
-          shouldUnlock = gameProfile.totalEnemiesDefeated >= 1;
-          break;
-        case 'COIN_COLLECTOR_100':
-          shouldUnlock = gameProfile.totalCoinsCollected >= 100;
-          break;
-        case 'COIN_COLLECTOR_500':
-          shouldUnlock = gameProfile.totalCoinsCollected >= 500;
-          break;
-        case 'SCORE_MASTER_1000':
-          shouldUnlock = gameProfile.totalScore >= 1000;
-          break;
-        case 'SCORE_MASTER_5000':
-          shouldUnlock = gameProfile.totalScore >= 5000;
-          break;
-        case 'KILLER_100':
-          shouldUnlock = gameProfile.totalEnemiesDefeated >= 100;
-          break;
-        case 'PLAYTIME_HOUR':
-          shouldUnlock = gameProfile.totalPlayTime >= 3600; // 1 hour
-          break;
-        case 'PLAYTIME_DAY':
-          shouldUnlock = gameProfile.totalPlayTime >= 86400; // 1 day
-          break;
-        // Add more conditions as needed
-        default:
-          break;
-      }
+      // Ensure progress is 100 if unlocked
+      const finalProgress = shouldUnlock ? 100 : currentProgress;
 
-      if (shouldUnlock) {
+      // Update or create PlayerAchievement
+      if (existing) {
+        // Update existing
+        existing.progress = finalProgress;
+        if (shouldUnlock && !isUnlocked) {
+          existing.unlockedAt = new Date();
+          gameProfile.totalScore += achievement.points;
+        }
+        await existing.save();
+      } else {
+        // Create new PlayerAchievement (even if not unlocked)
         const playerAchievement = new PlayerAchievement({
           userId,
           achievementId: achievement._id,
-          unlockedAt: new Date(),
-          progress: 100,
+          progress: finalProgress,
+          unlockedAt: shouldUnlock ? new Date() : null,
         });
+        await playerAchievement.save();
 
-        try {
-          await playerAchievement.save();
+        if (shouldUnlock) {
           gameProfile.totalScore += achievement.points;
-        } catch (err) {
-          // Achievement might already be unlocked
         }
       }
     }

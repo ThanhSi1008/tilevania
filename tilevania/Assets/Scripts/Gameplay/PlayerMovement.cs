@@ -32,6 +32,8 @@ public class PlayerMovement : MonoBehaviour
     void Update()
     {
         if (!isAlive) { return; }
+        // Block all movement if level is loading
+        if (LevelExit.IsLoading) { return; }
         Run();
         FlipSprite();
         ClimbLadder();
@@ -41,11 +43,19 @@ public class PlayerMovement : MonoBehaviour
     void OnMove(InputValue value)
     {
         if (!isAlive) { return; }
+        // Block input if level is loading
+        if (LevelExit.IsLoading) 
+        { 
+            moveInput = Vector2.zero;
+            return; 
+        }
         moveInput = value.Get<Vector2>();
     }
 
     void OnJump(InputValue value)
     {
+        // Block input if level is loading
+        if (LevelExit.IsLoading) { return; }
         if (!myFeetCollider.IsTouchingLayers(LayerMask.GetMask("Ground"))) { return; }
         if (value.isPressed)
         {
@@ -56,6 +66,14 @@ public class PlayerMovement : MonoBehaviour
 
     void Run()
     {
+        // Block movement if level is loading
+        if (LevelExit.IsLoading) 
+        { 
+            // Stop player movement during loading
+            myRigidbody.linearVelocity = new Vector2(0f, myRigidbody.linearVelocity.y);
+            myAnimator.SetBool("isRunning", false);
+            return; 
+        }
         Vector2 playerVelocity = new Vector2(moveInput.x * moveSpeed, myRigidbody.linearVelocity.y);
         myRigidbody.linearVelocity = playerVelocity;
         bool hasHorizontalSpeed = Mathf.Abs(myRigidbody.linearVelocity.x) > Mathf.Epsilon;
@@ -74,6 +92,8 @@ public class PlayerMovement : MonoBehaviour
 
     void ClimbLadder()
     {
+        // Block climbing if level is loading
+        if (LevelExit.IsLoading) { return; }
         if (!myFeetCollider.IsTouchingLayers(LayerMask.GetMask("Climbing")))
         {
             myRigidbody.gravityScale = gravityScaleAtStart;
@@ -91,6 +111,8 @@ public class PlayerMovement : MonoBehaviour
     void OnAttack(InputValue value)
     {
         if (!isAlive) { return; }
+        // Block input if level is loading
+        if (LevelExit.IsLoading) { return; }
         Instantiate(bullet, gun.position, transform.rotation);
     }
 

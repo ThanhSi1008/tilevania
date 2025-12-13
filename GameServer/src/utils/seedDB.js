@@ -14,7 +14,7 @@ const seedDatabase = async () => {
       const defaultLevels = [
         {
           levelNumber: 1,
-          levelName: 'Level 1: Castle Entrance',
+          levelName: 'Level 1',
           description: 'Start your adventure at the castle entrance. Collect coins and defeat enemies!',
           difficulty: 'EASY',
           maxCoins: 50,
@@ -24,7 +24,7 @@ const seedDatabase = async () => {
         },
         {
           levelNumber: 2,
-          levelName: 'Level 2: Dark Forest',
+          levelName: 'Level 2',
           description: 'Navigate through the dark forest. Be careful of the shadows!',
           difficulty: 'NORMAL',
           maxCoins: 75,
@@ -35,7 +35,7 @@ const seedDatabase = async () => {
         },
         {
           levelNumber: 3,
-          levelName: 'Level 3: Dragon Lair',
+          levelName: 'Level 3',
           description: 'Face the ultimate challenge in the dragon lair!',
           difficulty: 'HARD',
           maxCoins: 100,

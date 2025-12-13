@@ -11,12 +11,15 @@ public class AchievementManager : MonoBehaviour
     [Header("Notification")]
     [SerializeField] private GameObject achievementNotificationPrefab;
     [SerializeField] private Transform notificationParent;
+    [SerializeField] private float notificationSpacing = 120f; // Vertical spacing between notifications
+    [SerializeField] private Vector2 notificationStartPosition = new Vector2(0, 200f); // Starting position (top center)
 
     public IReadOnlyList<AchievementData> AllAchievements => achievements;
     public IReadOnlyList<PlayerAchievementData> UnlockedAchievements => unlocked;
 
     private readonly List<AchievementData> achievements = new List<AchievementData>();
     private readonly List<PlayerAchievementData> unlocked = new List<PlayerAchievementData>();
+    private readonly List<AchievementNotification> activeNotifications = new List<AchievementNotification>(); // Track active notifications
 
     [Serializable]
     public class AchievementData
@@ -206,7 +209,32 @@ public class AchievementManager : MonoBehaviour
             return;
         }
 
-        var parent = notificationParent != null ? notificationParent : transform;
+        // Find the best parent for the notification
+        Transform parent = null;
+        
+        // Priority 1: Use explicitly set notificationParent
+        if (notificationParent != null)
+        {
+            parent = notificationParent;
+            Debug.Log($"[Achievement] Using explicitly set notificationParent: {parent.name}");
+        }
+        else
+        {
+            // Priority 2: Find Canvas in current scene
+            var canvas = FindFirstObjectByType<Canvas>();
+            if (canvas != null)
+            {
+                parent = canvas.transform;
+                Debug.Log($"[Achievement] Found Canvas in current scene: {canvas.name}");
+            }
+            else
+            {
+                // Priority 3: Fallback to AchievementManager transform (may not be visible in gameplay scenes)
+                parent = transform;
+                Debug.LogWarning($"[Achievement] ⚠️ No Canvas found in scene, using AchievementManager transform ({parent.name}). Notification may not be visible!");
+            }
+        }
+        
         Debug.Log($"[Achievement] Spawning notification prefab at parent: {parent.name}");
         
         var go = Instantiate(achievementNotificationPrefab, parent);
@@ -215,11 +243,57 @@ public class AchievementManager : MonoBehaviour
         if (notification != null)
         {
             notification.SetContent(title, description);
-            Debug.Log($"[Achievement] ✅ Notification spawned and content set");
+            
+            // Calculate position based on number of active notifications
+            int notificationIndex = activeNotifications.Count;
+            Vector2 position = new Vector2(
+                notificationStartPosition.x,
+                notificationStartPosition.y - (notificationIndex * notificationSpacing)
+            );
+            
+            // Set position
+            RectTransform rectTransform = go.GetComponent<RectTransform>();
+            if (rectTransform != null)
+            {
+                rectTransform.anchoredPosition = position;
+                Debug.Log($"[Achievement] Notification positioned at index {notificationIndex}, position: {position}");
+            }
+            
+            // Track this notification
+            activeNotifications.Add(notification);
+            
+            // Register callback to remove from list when destroyed
+            notification.OnDestroyed += () => {
+                activeNotifications.Remove(notification);
+                UpdateNotificationPositions(); // Reposition remaining notifications
+            };
+            
+            Debug.Log($"[Achievement] ✅ Notification spawned and content set (active count: {activeNotifications.Count})");
         }
         else
         {
             Debug.LogWarning("[Achievement] ❌ AchievementNotification component not found on prefab!");
+        }
+    }
+    
+    private void UpdateNotificationPositions()
+    {
+        // Reposition all active notifications
+        for (int i = 0; i < activeNotifications.Count; i++)
+        {
+            var notification = activeNotifications[i];
+            if (notification != null)
+            {
+                RectTransform rectTransform = notification.GetComponent<RectTransform>();
+                if (rectTransform != null)
+                {
+                    Vector2 position = new Vector2(
+                        notificationStartPosition.x,
+                        notificationStartPosition.y - (i * notificationSpacing)
+                    );
+                    rectTransform.anchoredPosition = position;
+                }
+            }
         }
     }
 

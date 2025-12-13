@@ -45,7 +45,17 @@ const getLevelById = async (req, res) => {
 // Create level (admin only)
 const createLevel = async (req, res) => {
   try {
-    const { levelNumber, levelName, description, difficulty, maxCoins, maxEnemies, sceneName } = req.body;
+    const { 
+      levelNumber, 
+      levelName, 
+      description, 
+      difficulty, 
+      maxCoins, 
+      maxEnemies, 
+      sceneName,
+      isUnlocked,
+      requiredScoreToUnlock
+    } = req.body;
 
     // Validate required fields
     if (!levelNumber || !levelName || !sceneName || maxCoins === undefined || maxEnemies === undefined) {
@@ -73,6 +83,8 @@ const createLevel = async (req, res) => {
       maxCoins,
       maxEnemies,
       sceneName,
+      isUnlocked: isUnlocked !== undefined ? isUnlocked : false,
+      requiredScoreToUnlock: requiredScoreToUnlock !== undefined ? requiredScoreToUnlock : 0,
     });
 
     await newLevel.save();
