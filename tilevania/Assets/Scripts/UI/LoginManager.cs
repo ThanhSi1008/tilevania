@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Net;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -57,6 +58,23 @@ public class LoginManager : MonoBehaviour
         SetStatus(string.Empty);
     }
 
+    /// <summary>
+    /// Clear all input fields (email and password). Called when user logs out.
+    /// </summary>
+    public void ClearInputs()
+    {
+        if (emailInput != null)
+        {
+            emailInput.text = string.Empty;
+        }
+        if (passwordInput != null)
+        {
+            passwordInput.text = string.Empty;
+        }
+        SetStatus(string.Empty);
+        Debug.Log("[LoginManager] Input fields cleared");
+    }
+
     private IEnumerator LoginRoutine()
     {
         SetLoading(true, "Signing in...");
@@ -73,6 +91,8 @@ public class LoginManager : MonoBehaviour
         var payload = new LoginRequest { email = email, password = pass };
 
         var json = JsonUtility.ToJson(payload);
+        Debug.Log($"[LoginManager] Attempting login - Email: {email}, URL: {APIConfig.API_BASE_URL}/api/auth/login");
+        
         APIResponse<string> apiResult = null;
         // Auth headers không cần cho login; gửi request trần để tránh token cũ ảnh hưởng
         yield return APIClient.Post("/api/auth/login", json, r => apiResult = r, null);
@@ -85,17 +105,43 @@ public class LoginManager : MonoBehaviour
     {
         if (apiResult == null)
         {
-            SetStatus("Login failed: no response");
+            SetStatus("Login failed: no response from server");
+            Debug.LogError("[LoginManager] API response is null - server may be unreachable");
             return;
         }
 
         if (!apiResult.success)
         {
-            var msg = !string.IsNullOrEmpty(apiResult.error)
-                ? apiResult.error
-                : apiResult.data;
-            SetStatus($"Login error ({(int)apiResult.statusCode}): {msg}");
-            Debug.LogWarning($"Login failed status={(int)apiResult.statusCode} body={apiResult.data}");
+            // Provide user-friendly error messages
+            string userMessage;
+            if (apiResult.statusCode == HttpStatusCode.ServiceUnavailable || 
+                apiResult.statusCode == HttpStatusCode.BadGateway ||
+                (int)apiResult.statusCode == 0)
+            {
+                userMessage = "Cannot connect to server. Please check your internet connection and try again.";
+            }
+            else if (apiResult.statusCode == HttpStatusCode.RequestTimeout)
+            {
+                userMessage = "Request timeout. Server may be slow or unreachable.";
+            }
+            else if (apiResult.statusCode == HttpStatusCode.Unauthorized)
+            {
+                userMessage = "Invalid email or password.";
+            }
+            else if (apiResult.statusCode == HttpStatusCode.NotFound)
+            {
+                userMessage = "Login endpoint not found. Server may be misconfigured.";
+            }
+            else
+            {
+                userMessage = !string.IsNullOrEmpty(apiResult.error)
+                    ? apiResult.error
+                    : (!string.IsNullOrEmpty(apiResult.data) ? apiResult.data : "Unknown error occurred");
+            }
+
+            SetStatus($"Login error: {userMessage}");
+            Debug.LogWarning($"[LoginManager] Login failed - StatusCode: {(int)apiResult.statusCode} ({apiResult.statusCode}), " +
+                           $"Error: {apiResult.error}, Body: {apiResult.data}");
             return;
         }
 

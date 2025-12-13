@@ -197,85 +197,100 @@ public class GameSession : MonoBehaviour
         Debug.Log($"[GameSession] OnGameEnd called with status={status}");
         Debug.Log($"[GameSession] isSessionActive={isSessionActive}, hasSessionManager={SessionManager.Instance != null}, sessionId={SessionManager.Instance?.ActiveSessionId}");
 
-        if (!isSessionActive || SessionManager.Instance == null || string.IsNullOrEmpty(SessionManager.Instance.ActiveSessionId))
+        bool sessionWasActive = isSessionActive;
+        var sessionId = SessionManager.Instance?.ActiveSessionId;
+        var durationSeconds = sessionWasActive ? Mathf.Max(0, (int)(DateTime.Now - sessionStartTime).TotalSeconds) : 0;
+
+        // Try to end session on server if it was active
+        if (sessionWasActive && SessionManager.Instance != null && !string.IsNullOrEmpty(sessionId))
         {
-            Debug.LogWarning("[GameSession] Cannot end session - session not active or missing sessionId");
-            yield break;
-        }
+            isSessionActive = false;
+            
+            Debug.Log($"[GameSession] Final stats - Score: {score}, Coins: {coinsCollected}, Enemies: {enemiesDefeated}, Deaths: {deathCount}, Duration: {durationSeconds}s");
+            Debug.Log($"[GameSession] Current levelId: {currentLevelId}");
 
-        isSessionActive = false;
-        var sessionId = SessionManager.Instance.ActiveSessionId;
-        var durationSeconds = Mathf.Max(0, (int)(DateTime.Now - sessionStartTime).TotalSeconds);
-
-        Debug.Log($"[GameSession] Final stats - Score: {score}, Coins: {coinsCollected}, Enemies: {enemiesDefeated}, Deaths: {deathCount}, Duration: {durationSeconds}s");
-        Debug.Log($"[GameSession] Current levelId: {currentLevelId}");
-
-        var payload = new SessionEndRequest
-        {
-            status = status,
-            finalScore = score,
-            coinsCollected = coinsCollected,
-            enemiesDefeated = enemiesDefeated,
-            deathCount = deathCount,
-            livesRemaining = playerLives
-        };
-
-        var json = JsonUtility.ToJson(payload);
-        APIResponse<string> apiResult = null;
-
-        Debug.Log($"[GameSession] Ending session - sessionId={sessionId}, status={status}");
-        yield return APIClient.Post(APIConfig.EndSession(sessionId), json, r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
-
-        if (apiResult != null && apiResult.success)
-        {
-            Debug.Log("[GameSession] ✅ Session ended successfully on server");
-
-            // Sync level completion details to level-progress service when completed
-            if (status == "COMPLETED")
+            var payload = new SessionEndRequest
             {
-                Debug.Log("[GameSession] Status is COMPLETED, proceeding with level progress and achievements...");
-                
-                if (LevelProgressManager.Instance != null && AuthManager.Instance?.CurrentPlayer != null)
-                {
-                    Debug.Log($"[GameSession] Calling CompleteLevel - userId={AuthManager.Instance.CurrentPlayer.userId}, levelId={currentLevelId}");
-                    yield return LevelProgressManager.Instance.CompleteLevel(
-                        AuthManager.Instance.CurrentPlayer.userId,
-                        currentLevelId,
-                        score,
-                        coinsCollected,
-                        enemiesDefeated,
-                        durationSeconds);
-                    Debug.Log("[GameSession] ✅ CompleteLevel finished");
-                }
-                else
-                {
-                    Debug.LogWarning($"[GameSession] Cannot complete level - LevelProgressManager={LevelProgressManager.Instance != null}, CurrentPlayer={AuthManager.Instance?.CurrentPlayer != null}");
-                }
+                status = status,
+                finalScore = score,
+                coinsCollected = coinsCollected,
+                enemiesDefeated = enemiesDefeated,
+                deathCount = deathCount,
+                livesRemaining = playerLives
+            };
 
-                // Refresh achievements and show notifications for new unlocks
-                if (AchievementManager.Instance != null)
-                {
-                    Debug.Log("[GameSession] Refreshing achievements and checking for new unlocks...");
-                    yield return AchievementManager.Instance.RefreshUnlocked(true);
-                    Debug.Log("[GameSession] ✅ Achievement refresh finished");
-                }
-                else
-                {
-                    Debug.LogWarning("[GameSession] AchievementManager.Instance is null, cannot refresh achievements");
-                }
+            var json = JsonUtility.ToJson(payload);
+            APIResponse<string> apiResult = null;
+
+            Debug.Log($"[GameSession] Ending session - sessionId={sessionId}, status={status}");
+            yield return APIClient.Post(APIConfig.EndSession(sessionId), json, r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
+
+            if (apiResult != null && apiResult.success)
+            {
+                Debug.Log("[GameSession] ✅ Session ended successfully on server");
             }
             else
             {
-                Debug.Log($"[GameSession] Status is {status}, skipping level progress and achievements");
+                Debug.LogWarning($"[GameSession] ❌ Failed to end session - Status: {apiResult?.statusCode}, Error: {apiResult?.error}");
+            }
+
+            SessionManager.Instance.ClearSession();
+            Debug.Log("[GameSession] Session cleared from SessionManager");
+        }
+        else
+        {
+            Debug.LogWarning("[GameSession] Session was not active or missing sessionId - skipping session end, but will still process level completion and achievements");
+        }
+
+        // ALWAYS process level completion and achievements when status is COMPLETED, even if session wasn't active
+        // This ensures achievements are checked and notifications shown when player completes a level
+        if (status == "COMPLETED")
+        {
+            Debug.Log("[GameSession] Status is COMPLETED, proceeding with level progress and achievements...");
+            
+            if (LevelProgressManager.Instance != null && AuthManager.Instance?.CurrentPlayer != null)
+            {
+                // Resolve levelId if not already set
+                if (string.IsNullOrEmpty(currentLevelId))
+                {
+                    Debug.Log("[GameSession] currentLevelId is empty, resolving...");
+                    yield return StartCoroutine(ResolveLevelId(levelId =>
+                    {
+                        currentLevelId = levelId;
+                    }));
+                }
+                
+                Debug.Log($"[GameSession] Calling CompleteLevel - userId={AuthManager.Instance.CurrentPlayer.userId}, levelId={currentLevelId}");
+                yield return LevelProgressManager.Instance.CompleteLevel(
+                    AuthManager.Instance.CurrentPlayer.userId,
+                    currentLevelId,
+                    score,
+                    coinsCollected,
+                    enemiesDefeated,
+                    durationSeconds);
+                Debug.Log("[GameSession] ✅ CompleteLevel finished");
+            }
+            else
+            {
+                Debug.LogWarning($"[GameSession] Cannot complete level - LevelProgressManager={LevelProgressManager.Instance != null}, CurrentPlayer={AuthManager.Instance?.CurrentPlayer != null}");
+            }
+
+            // Refresh achievements and show notifications for new unlocks
+            if (AchievementManager.Instance != null)
+            {
+                Debug.Log("[GameSession] Refreshing achievements and checking for new unlocks...");
+                yield return AchievementManager.Instance.RefreshUnlocked(true);
+                Debug.Log("[GameSession] ✅ Achievement refresh finished");
+            }
+            else
+            {
+                Debug.LogWarning("[GameSession] AchievementManager.Instance is null, cannot refresh achievements");
             }
         }
         else
         {
-            Debug.LogWarning($"[GameSession] ❌ Failed to end session - Status: {apiResult?.statusCode}, Error: {apiResult?.error}");
+            Debug.Log($"[GameSession] Status is {status}, skipping level progress and achievements");
         }
-
-        SessionManager.Instance.ClearSession();
-        Debug.Log("[GameSession] Session cleared from SessionManager");
     }
 
     public void ProcessPlayerDeath()

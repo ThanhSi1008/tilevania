@@ -56,14 +56,56 @@ public static class APIClient
 
         yield return request.SendWebRequest();
 
+        // Determine success based on result
+        bool isSuccess = request.result == UnityWebRequest.Result.Success;
+        HttpStatusCode statusCode = (HttpStatusCode)request.responseCode;
+        
+        // If responseCode is 0, it means no response (connection error, timeout, etc.)
+        if (request.responseCode == 0)
+        {
+            if (request.result == UnityWebRequest.Result.ConnectionError)
+            {
+                // Check if it's a timeout by examining the error message
+                if (!string.IsNullOrEmpty(request.error) && 
+                    (request.error.Contains("timeout") || request.error.Contains("Timeout")))
+                {
+                    statusCode = HttpStatusCode.RequestTimeout; // 408
+                }
+                else
+                {
+                    statusCode = HttpStatusCode.ServiceUnavailable; // 503
+                }
+            }
+            else if (request.result == UnityWebRequest.Result.ProtocolError)
+            {
+                statusCode = HttpStatusCode.BadGateway; // 502
+            }
+            else
+            {
+                statusCode = HttpStatusCode.BadGateway; // 502
+            }
+        }
+
         var response = new APIResponse<string>
         {
-            success = !request.result.HasFlag(UnityWebRequest.Result.ConnectionError) &&
-                      !request.result.HasFlag(UnityWebRequest.Result.ProtocolError),
-            data = request.downloadHandler?.text,
-            error = request.error,
-            statusCode = (HttpStatusCode)request.responseCode
+            success = isSuccess,
+            data = request.downloadHandler?.text ?? string.Empty,
+            error = request.error ?? (isSuccess ? string.Empty : $"Request failed: {request.result}"),
+            statusCode = statusCode
         };
+
+        // Log detailed error information for debugging
+        if (!isSuccess)
+        {
+            Debug.LogError($"[APIClient] Request failed - URL: {url}, Method: {method}, " +
+                          $"Result: {request.result}, Error: {request.error}, " +
+                          $"ResponseCode: {request.responseCode}, StatusCode: {statusCode}, " +
+                          $"Body: {response.data}");
+        }
+        else
+        {
+            Debug.Log($"[APIClient] Request success - URL: {url}, StatusCode: {statusCode}");
+        }
 
         onComplete?.Invoke(response);
         request.Dispose();

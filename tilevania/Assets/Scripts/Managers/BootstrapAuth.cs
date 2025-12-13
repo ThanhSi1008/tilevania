@@ -66,11 +66,42 @@ public class BootstrapAuth : MonoBehaviour
         SetLoading(false);
     }
 
-    private void ShowLoginPanel()
+    public void ShowLoginPanel()
     {
-        if (loginPanel != null) loginPanel.SetActive(true);
-        if (registerPanel != null) registerPanel.SetActive(false);
-        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+        Debug.Log($"[BootstrapAuth] ShowLoginPanel called - loginPanel: {loginPanel?.name ?? "NULL"}, registerPanel: {registerPanel?.name ?? "NULL"}, mainMenuPanel: {mainMenuPanel?.name ?? "NULL"}");
+        
+        if (loginPanel != null)
+        {
+            loginPanel.SetActive(true);
+            Debug.Log($"[BootstrapAuth] Set loginPanel active: {loginPanel.name}");
+            
+            // Clear login input fields when showing login panel (e.g., after logout)
+            var loginManager = loginPanel.GetComponent<LoginManager>();
+            if (loginManager != null)
+            {
+                loginManager.ClearInputs();
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[BootstrapAuth] loginPanel is NULL!");
+        }
+        
+        if (registerPanel != null)
+        {
+            registerPanel.SetActive(false);
+            Debug.Log($"[BootstrapAuth] Set registerPanel inactive: {registerPanel.name}");
+        }
+        
+        if (mainMenuPanel != null)
+        {
+            mainMenuPanel.SetActive(false);
+            Debug.Log($"[BootstrapAuth] Set mainMenuPanel inactive: {mainMenuPanel.name}");
+        }
+        else
+        {
+            Debug.LogError("[BootstrapAuth] mainMenuPanel is NULL! Cannot hide main menu panel.");
+        }
     }
 
     private void ShowMainMenu()
