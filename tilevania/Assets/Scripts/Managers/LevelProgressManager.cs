@@ -43,6 +43,12 @@ public class LevelProgressManager : MonoBehaviour
         public int time;
     }
 
+    [Serializable]
+    private class UpdateCurrentLevelRequest
+    {
+        public string currentLevel;
+    }
+
     void Awake()
     {
         if (Instance != null && Instance != this)
@@ -527,7 +533,7 @@ public class LevelProgressManager : MonoBehaviour
         var userId = AuthManager.Instance.CurrentPlayer.userId;
         Debug.Log($"[LevelProgress] UpdateCurrentLevel: Updating currentLevel to levelId={levelId} for userId={userId}");
         
-        var updateData = new { currentLevel = levelId };
+        var updateData = new UpdateCurrentLevelRequest { currentLevel = levelId };
         var json = JsonUtility.ToJson(updateData);
         Debug.Log($"[LevelProgress] UpdateCurrentLevel: Request body: {json}");
 
