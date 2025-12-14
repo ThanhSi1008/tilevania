@@ -36,5 +36,11 @@ public static class APIConfig
     public static string Achievements => "/api/achievements";
     public static string PlayerAchievements(string userId) => $"/api/achievements/{userId}/unlocked";
     public static string UnlockAchievement(string userId, string achievementId) => $"/api/achievements/{userId}/unlock/{achievementId}";
+
+    // Leaderboard
+    public static string Leaderboard => "/api/leaderboard";
+    public static string LeaderboardWeekly => "/api/leaderboard/weekly";
+    public static string LeaderboardDaily => "/api/leaderboard/daily";
+    public static string LeaderboardRank(string userId) => $"/api/leaderboard/rank/{userId}";
 }
 
