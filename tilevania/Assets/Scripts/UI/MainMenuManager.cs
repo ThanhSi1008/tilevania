@@ -209,6 +209,9 @@ public class MainMenuManager : MonoBehaviour
     {
         Debug.Log("[MainMenuManager] Logout clicked - clearing auth and returning to login");
         
+        // Ensure we always have a reference to the main menu object (fallback to this)
+        var mainMenuObj = mainMenuPanel != null ? mainMenuPanel : gameObject;
+        
         // Clear authentication FIRST
         AuthManager.Instance?.ClearAuth();
         
@@ -240,7 +243,8 @@ public class MainMenuManager : MonoBehaviour
             }
             else
             {
-                Debug.LogError("[MainMenuManager] mainMenuPanel reference is NULL! Cannot hide main menu panel.");
+                Debug.LogWarning("[MainMenuManager] mainMenuPanel reference is NULL! Falling back to this GameObject.");
+                mainMenuObj.SetActive(false);
             }
         }
         
@@ -249,10 +253,10 @@ public class MainMenuManager : MonoBehaviour
         
         // DOUBLE CHECK: Ensure mainMenuPanel is hidden after RefreshUI (in case something interfered)
         // Try both direct reference and via BootstrapAuth
-        if (mainMenuPanel != null && mainMenuPanel.activeSelf)
+        if (mainMenuObj != null && mainMenuObj.activeSelf)
         {
-            Debug.LogWarning($"[MainMenuManager] mainMenuPanel was still active after RefreshUI! Forcing it inactive: {mainMenuPanel.name}");
-            mainMenuPanel.SetActive(false);
+            Debug.LogWarning($"[MainMenuManager] mainMenuPanel was still active after RefreshUI! Forcing it inactive: {mainMenuObj.name}");
+            mainMenuObj.SetActive(false);
         }
         
         // Also try to hide via BootstrapAuth's reference if available

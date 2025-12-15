@@ -66,6 +66,8 @@ public class LeaderboardManager : MonoBehaviour
             _ => APIConfig.Leaderboard
         };
 
+        Debug.Log($"[Leaderboard] Fetch start period={period} endpoint={endpoint}");
+
         // Check cache first
         if (cache.ContainsKey(period) && cache[period].isValid(cacheDuration))
         {
@@ -76,6 +78,8 @@ public class LeaderboardManager : MonoBehaviour
 
         APIResponse<string> apiResult = null;
         yield return APIClient.Get(endpoint, r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
+
+        Debug.Log($"[Leaderboard] Fetch response success={apiResult?.success} status={(int?)apiResult?.statusCode} error={apiResult?.error ?? "none"} bodyLen={(apiResult?.data != null ? apiResult.data.Length : 0)}");
 
         if (apiResult != null && apiResult.success && !string.IsNullOrEmpty(apiResult.data))
         {
@@ -88,6 +92,10 @@ public class LeaderboardManager : MonoBehaviour
                 {
                     entries.AddRange(parsed.leaderboard);
                     Debug.Log($"[Leaderboard] ✅ Fetched {entries.Count} entries for {period}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[Leaderboard] Parsed response is null or leaderboard null for {period}, raw={apiResult.data}");
                 }
 
                 // Update cache

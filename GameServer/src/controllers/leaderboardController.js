@@ -110,8 +110,21 @@ const calculateLeaderboards = async () => {
     const { GameProfile } = require('../models');
     const gameProfiles = await GameProfile.find().populate('userId');
 
+    // Filter out orphan profiles without user (avoid null refs)
+    const validProfiles = gameProfiles.filter(gp => gp && gp.userId);
+    if (validProfiles.length !== gameProfiles.length) {
+      console.warn(
+        `[Leaderboard] Skipped ${gameProfiles.length - validProfiles.length} orphan game profiles with null user`
+      );
+    }
+
+    if (validProfiles.length === 0) {
+      console.warn('[Leaderboard] No game profiles found to build leaderboards.');
+      return;
+    }
+
     // Calculate ALLTIME leaderboard
-    const alltimeScores = gameProfiles
+    const alltimeScores = validProfiles
       .map(gp => ({
         userId: gp.userId._id,
         username: gp.userId.username,

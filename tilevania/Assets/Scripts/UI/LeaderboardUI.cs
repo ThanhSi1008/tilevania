@@ -110,6 +110,8 @@ public class LeaderboardUI : MonoBehaviour
             currentUserId = AuthManager.Instance.CurrentPlayer.userId;
         }
 
+        Debug.Log($"[LeaderboardUI] Start load period={period}, userId={currentUserId ?? "NULL"}");
+
         // Fetch leaderboard
         StartCoroutine(LoadLeaderboardCoroutine(period, currentUserId));
     }
@@ -121,6 +123,15 @@ public class LeaderboardUI : MonoBehaviour
 
         isLoading = false;
         SetLoadingState(false);
+
+        if (entries == null)
+        {
+            Debug.LogWarning($"[LeaderboardUI] entries is NULL after fetch for {period}");
+        }
+        else
+        {
+            Debug.Log($"[LeaderboardUI] entries.Count={entries.Count} for {period}");
+        }
 
         if (entries == null || entries.Count == 0)
         {
@@ -190,7 +201,8 @@ public class LeaderboardUI : MonoBehaviour
         gameObject.SetActive(false);
         
         // Show main menu
-        var mainMenu = FindFirstObjectByType<MainMenuManager>();
+        // Need to search inactive objects because main menu is hidden while leaderboard is open
+        var mainMenu = FindFirstObjectByType<MainMenuManager>(FindObjectsInactive.Include);
         if (mainMenu != null)
         {
             mainMenu.gameObject.SetActive(true);
