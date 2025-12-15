@@ -1,5 +1,4 @@
 using System.Collections;
-using Unity.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -12,29 +11,35 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] GameObject bullet;
     [SerializeField] Transform gun;
 
+    [SerializeField] float dashSpeed = 30f;
+    [SerializeField] float dashDuration = 0.15f;
+    [SerializeField] float dashCooldown = 0.5f;
+
     Vector2 moveInput;
     Rigidbody2D myRigidbody;
     Animator myAnimator;
     CapsuleCollider2D myBodyCollider;
-    float gravityScaleAtStart;
     BoxCollider2D myFeetCollider;
+    float gravityScaleAtStart;
 
     bool isAlive = true;
+    bool isDashing;
+    float lastDashTime;
 
     void Start()
     {
         myRigidbody = GetComponent<Rigidbody2D>();
         myAnimator = GetComponent<Animator>();
         myBodyCollider = GetComponent<CapsuleCollider2D>();
-        gravityScaleAtStart = myRigidbody.gravityScale;
         myFeetCollider = GetComponent<BoxCollider2D>();
+        gravityScaleAtStart = myRigidbody.gravityScale;
     }
 
     void Update()
     {
-        if (!isAlive) { return; }
-        // Block all movement if level is loading
-        if (LevelExit.IsLoading) { return; }
+        if (!isAlive) return;
+        if (LevelExit.IsLoading) return;
+
         Run();
         FlipSprite();
         ClimbLadder();
@@ -43,43 +48,69 @@ public class PlayerMovement : MonoBehaviour
 
     void OnMove(InputValue value)
     {
-        if (!isAlive) { return; }
-        // Block input if level is loading
-        if (LevelExit.IsLoading) 
-        { 
+        if (!isAlive) return;
+
+        if (LevelExit.IsLoading)
+        {
             moveInput = Vector2.zero;
-            return; 
+            return;
         }
+
         moveInput = value.Get<Vector2>();
     }
 
     void OnJump(InputValue value)
     {
-        // Block input if level is loading
-        if (LevelExit.IsLoading) { return; }
-        if (!myFeetCollider.IsTouchingLayers(LayerMask.GetMask("Ground"))) { return; }
+        if (LevelExit.IsLoading) return;
+        if (!myFeetCollider.IsTouchingLayers(LayerMask.GetMask("Ground"))) return;
+
         if (value.isPressed)
         {
-            // do stuff
             myRigidbody.linearVelocity += new Vector2(0f, jumpSpeed);
         }
     }
 
+    void OnDash(InputValue value)
+    {
+        if (!isAlive) return;
+        if (LevelExit.IsLoading) return;
+        if (isDashing) return;
+        if (Time.time < lastDashTime + dashCooldown) return;
+
+        StartCoroutine(Dash());
+    }
+
+    IEnumerator Dash()
+    {
+        isDashing = true;
+        lastDashTime = Time.time;
+
+        float dashDir = transform.localScale.x;
+        myRigidbody.gravityScale = 0f;
+        myRigidbody.linearVelocity = new Vector2(dashDir * dashSpeed, 0f);
+
+        yield return new WaitForSeconds(dashDuration);
+
+        myRigidbody.gravityScale = gravityScaleAtStart;
+        isDashing = false;
+    }
+
     void Run()
     {
-        // Block movement if level is loading
-        if (LevelExit.IsLoading) 
-        { 
-            // Stop player movement during loading
+        if (LevelExit.IsLoading)
+        {
             myRigidbody.linearVelocity = new Vector2(0f, myRigidbody.linearVelocity.y);
             myAnimator.SetBool("isRunning", false);
-            return; 
+            return;
         }
+
+        if (isDashing) return;
+
         Vector2 playerVelocity = new Vector2(moveInput.x * moveSpeed, myRigidbody.linearVelocity.y);
         myRigidbody.linearVelocity = playerVelocity;
+
         bool hasHorizontalSpeed = Mathf.Abs(myRigidbody.linearVelocity.x) > Mathf.Epsilon;
         myAnimator.SetBool("isRunning", hasHorizontalSpeed);
-
     }
 
     void FlipSprite()
@@ -93,14 +124,15 @@ public class PlayerMovement : MonoBehaviour
 
     void ClimbLadder()
     {
-        // Block climbing if level is loading
-        if (LevelExit.IsLoading) { return; }
+        if (LevelExit.IsLoading) return;
+
         if (!myFeetCollider.IsTouchingLayers(LayerMask.GetMask("Climbing")))
         {
             myRigidbody.gravityScale = gravityScaleAtStart;
             myAnimator.SetBool("isClimbing", false);
             return;
         }
+
         myRigidbody.gravityScale = 0f;
         Vector2 climbVelocity = new Vector2(myRigidbody.linearVelocity.x, moveInput.y * climbSpeed);
         myRigidbody.linearVelocity = climbVelocity;
@@ -111,9 +143,9 @@ public class PlayerMovement : MonoBehaviour
 
     void OnAttack(InputValue value)
     {
-        if (!isAlive) { return; }
-        // Block input if level is loading
-        if (LevelExit.IsLoading) { return; }
+        if (!isAlive) return;
+        if (LevelExit.IsLoading) return;
+
         Instantiate(bullet, gun.position, transform.rotation);
     }
 
@@ -124,8 +156,7 @@ public class PlayerMovement : MonoBehaviour
             isAlive = false;
             myAnimator.SetTrigger("Dying");
             myRigidbody.linearVelocity = deathKick;
-            
-            // Try to find GameSession - use FindFirstObjectByType for better reliability
+
             var gameSession = FindFirstObjectByType<GameSession>();
             if (gameSession != null)
             {
@@ -133,58 +164,35 @@ public class PlayerMovement : MonoBehaviour
             }
             else
             {
-                // Try FindAnyObjectByType as fallback
-                gameSession = FindAnyObjectByType<GameSession>();
-                if (gameSession != null)
-                {
-                    gameSession.ProcessPlayerDeath();
-                }
-                else
-                {
-                    Debug.LogWarning("[PlayerMovement] GameSession not found, cannot process death. GameSession may have been destroyed or not yet created. Waiting and retrying...");
-                    // Wait a frame and retry - GameSession might still be initializing
-                    StartCoroutine(RetryFindGameSessionAndProcessDeath());
-                }
+                StartCoroutine(RetryFindGameSessionAndProcessDeath());
             }
-        }
-    }
-    
-    private System.Collections.IEnumerator RetryFindGameSessionAndProcessDeath()
-    {
-        // Wait longer for GameSession to be created/initialized
-        // GameSession might be created in OnSceneLoaded or Start(), which can take a few frames
-        int maxRetries = 10;
-        int retryCount = 0;
-        
-        while (retryCount < maxRetries)
-        {
-            yield return null; // Wait one frame
-            
-            var gameSession = FindFirstObjectByType<GameSession>();
-            if (gameSession != null)
-            {
-                Debug.Log($"[PlayerMovement] Found GameSession after {retryCount + 1} retries, processing death");
-                gameSession.ProcessPlayerDeath();
-                yield break; // Exit coroutine
-            }
-            
-            retryCount++;
-        }
-        
-        // If still not found after all retries, try one more time with FindAnyObjectByType
-        var gameSessionFallback = FindAnyObjectByType<GameSession>();
-        if (gameSessionFallback != null)
-        {
-            Debug.Log("[PlayerMovement] Found GameSession with FindAnyObjectByType after all retries, processing death");
-            gameSessionFallback.ProcessPlayerDeath();
-        }
-        else
-        {
-            Debug.LogError("[PlayerMovement] GameSession still not found after all retries. Reloading scene as fallback.");
-            // If GameSession is still not found, reload the current scene (basic death handling)
-            int currentSceneIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;
-            UnityEngine.SceneManagement.SceneManager.LoadScene(currentSceneIndex);
         }
     }
 
+    IEnumerator RetryFindGameSessionAndProcessDeath()
+    {
+        int retries = 10;
+
+        while (retries-- > 0)
+        {
+            yield return null;
+            var gameSession = FindFirstObjectByType<GameSession>();
+            if (gameSession != null)
+            {
+                gameSession.ProcessPlayerDeath();
+                yield break;
+            }
+        }
+
+        var fallback = FindAnyObjectByType<GameSession>();
+        if (fallback != null)
+        {
+            fallback.ProcessPlayerDeath();
+        }
+        else
+        {
+            int index = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;
+            UnityEngine.SceneManagement.SceneManager.LoadScene(index);
+        }
+    }
 }
