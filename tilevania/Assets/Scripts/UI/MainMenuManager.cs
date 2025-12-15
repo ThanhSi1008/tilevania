@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -13,10 +14,22 @@ public class MainMenuManager : MonoBehaviour
     [SerializeField] private Button logoutButton;
     [SerializeField] private Button playButton;
     
+    [Header("Player Stats UI (Phase 4)")]
+    [SerializeField] private TextMeshProUGUI rankValueText;
+    [SerializeField] private TextMeshProUGUI totalScoreText;
+    [SerializeField] private TextMeshProUGUI totalCoinsText;
+    [SerializeField] private TextMeshProUGUI achievementsText;
+    
+    [Header("Navigation Buttons (Phase 4)")]
+    [SerializeField] private Button leaderboardButton;
+    [SerializeField] private Button achievementsButton;
+    
     [Header("Panel References")]
     [SerializeField] private GameObject loginPanel;
     [SerializeField] private GameObject registerPanel;
     [SerializeField] private GameObject mainMenuPanel;
+    [SerializeField] private GameObject leaderboardPanel;
+    [SerializeField] private GameObject achievementsPanel;
     
     [Header("Scene Settings")]
     [SerializeField] private string gameplaySceneName = "Level 1"; // Tên scene gameplay trong Build Settings
@@ -24,6 +37,21 @@ public class MainMenuManager : MonoBehaviour
     void Start()
     {
         RefreshUI();
+        SetupButtons();
+        LoadPlayerStats();
+    }
+
+    void OnEnable()
+    {
+        // Refresh stats when menu is shown
+        if (AuthManager.Instance != null && AuthManager.Instance.HasToken())
+        {
+            LoadPlayerStats();
+        }
+    }
+
+    private void SetupButtons()
+    {
         if (logoutButton != null)
         {
             logoutButton.onClick.AddListener(OnLogoutClicked);
@@ -31,6 +59,14 @@ public class MainMenuManager : MonoBehaviour
         if (playButton != null)
         {
             playButton.onClick.AddListener(OnPlayClicked);
+        }
+        if (leaderboardButton != null)
+        {
+            leaderboardButton.onClick.AddListener(OnLeaderboardClicked);
+        }
+        if (achievementsButton != null)
+        {
+            achievementsButton.onClick.AddListener(OnAchievementsClicked);
         }
     }
 
@@ -57,6 +93,116 @@ public class MainMenuManager : MonoBehaviour
             : "Guest";
 
         if (usernameText != null) usernameText.text = $"Welcome, {username}";
+    }
+
+    private void LoadPlayerStats()
+    {
+        if (AuthManager.Instance == null || !AuthManager.Instance.HasToken() || AuthManager.Instance.CurrentPlayer == null)
+        {
+            // Clear stats if not logged in
+            if (rankValueText != null) rankValueText.text = "N/A";
+            if (totalScoreText != null) totalScoreText.text = "0";
+            if (totalCoinsText != null) totalCoinsText.text = "0";
+            if (achievementsText != null) achievementsText.text = "0/0";
+            return;
+        }
+
+        var userId = AuthManager.Instance.CurrentPlayer.userId;
+        StartCoroutine(LoadPlayerStatsCoroutine(userId));
+    }
+
+    private IEnumerator LoadPlayerStatsCoroutine(string userId)
+    {
+        // Load rank
+        if (rankValueText != null && LeaderboardManager.Instance != null)
+        {
+            LeaderboardManager.LeaderboardEntry rankData = null;
+            yield return LeaderboardManager.Instance.GetPlayerRank(userId, "ALLTIME", (rank) => rankData = rank);
+            
+            if (rankData != null)
+            {
+                rankValueText.text = $"#{rankData.rank}";
+                rankValueText.color = rankData.rank <= 3 ? Color.yellow : Color.white;
+            }
+            else
+            {
+                rankValueText.text = "N/A";
+            }
+        }
+
+        // Load game profile stats
+        APIResponse<string> apiResult = null;
+        yield return APIClient.Get(APIConfig.GameProfile(userId), r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
+
+        if (apiResult != null && apiResult.success && !string.IsNullOrEmpty(apiResult.data))
+        {
+            try
+            {
+                var parsed = JsonUtility.FromJson<GameProfileResponse>(apiResult.data);
+                if (parsed != null && parsed.gameProfile != null)
+                {
+                    var profile = parsed.gameProfile;
+                    
+                    if (totalScoreText != null)
+                    {
+                        totalScoreText.text = profile.totalScore.ToString("N0");
+                    }
+                    
+                    if (totalCoinsText != null)
+                    {
+                        totalCoinsText.text = profile.totalCoinsCollected.ToString("N0");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[MainMenuManager] Failed to parse game profile: {ex.Message}");
+            }
+        }
+
+        // Load achievements count
+        if (achievementsText != null && AchievementManager.Instance != null)
+        {
+            int totalAchievements = AchievementManager.Instance.AllAchievements?.Count ?? 0;
+            int unlockedCount = AchievementManager.Instance.UnlockedAchievements?.Count ?? 0;
+            achievementsText.text = $"{unlockedCount}/{totalAchievements}";
+            
+            // Color green if all unlocked
+            if (unlockedCount == totalAchievements && totalAchievements > 0)
+            {
+                achievementsText.color = Color.green;
+            }
+            else
+            {
+                achievementsText.color = Color.white;
+            }
+        }
+    }
+
+    private void OnLeaderboardClicked()
+    {
+        if (leaderboardPanel != null)
+        {
+            leaderboardPanel.SetActive(true);
+            gameObject.SetActive(false);
+        }
+        else
+        {
+            Debug.LogWarning("[MainMenuManager] Leaderboard panel not assigned!");
+        }
+    }
+
+    private void OnAchievementsClicked()
+    {
+        if (achievementsPanel != null)
+        {
+            achievementsPanel.SetActive(true);
+            gameObject.SetActive(false);
+        }
+        else
+        {
+            Debug.LogWarning("[MainMenuManager] Achievements panel not assigned!");
+        }
     }
 
     public void OnLogoutClicked()
@@ -197,6 +343,22 @@ public class MainMenuManager : MonoBehaviour
 
         Debug.Log($"[MainMenuManager] ✅ FINAL: Loading level scene: '{sceneToLoad}' (Level {levelToLoad.levelNumber}, levelName: {levelToLoad.levelName})");
         SceneManager.LoadScene(sceneToLoad);
+    }
+
+    [Serializable]
+    private class GameProfileResponse
+    {
+        public GameProfileData gameProfile;
+    }
+
+    [Serializable]
+    private class GameProfileData
+    {
+        public int totalScore;
+        public int totalCoinsCollected;
+        public int totalEnemiesDefeated;
+        public int totalDeaths;
+        public float totalPlayTime;
     }
 }
 
