@@ -22,18 +22,15 @@ public class LevelExit : MonoBehaviour
         if (other.CompareTag("Player") && !isProcessing)
         {
             isProcessing = true;
-            Debug.Log("[LevelExit] Player reached level exit! Starting level completion process...");
             StartCoroutine(LoadNextLevel());
         }
         else if (isProcessing)
         {
-            Debug.Log("[LevelExit] Level completion already in progress, ignoring trigger");
         }
     }
 
     IEnumerator LoadNextLevel()
     {
-        Debug.Log($"[LevelExit] LoadNextLevel started - Waiting {levelLoadDelay} seconds...");
         yield return new WaitForSecondsRealtime(levelLoadDelay);
         
         // Set loading flag to disable player input
@@ -50,18 +47,14 @@ public class LevelExit : MonoBehaviour
         var gameSession = FindFirstObjectByType<GameSession>();
         if (gameSession != null)
         {
-            Debug.Log("[LevelExit] Found GameSession, calling EndSession(COMPLETED)...");
             // Sync final stats and end session (this will also check achievements and show notifications)
             yield return gameSession.EndSession("COMPLETED");
-            Debug.Log("[LevelExit] EndSession completed!");
         }
         else
         {
-            Debug.LogWarning("[LevelExit] GameSession not found! Cannot end session properly.");
         }
         
         // Wait a bit more to let players see achievement notifications (but keep loading overlay visible)
-        Debug.Log("[LevelExit] Waiting 2 seconds for achievement notifications...");
         yield return new WaitForSecondsRealtime(2f);
         
         // Ensure loading overlay is still visible before loading
@@ -73,13 +66,10 @@ public class LevelExit : MonoBehaviour
 
         if (nextSceneIndex == SceneManager.sceneCountInBuildSettings)
         {
-            Debug.Log("[LevelExit] Reached last level, returning to scene 0 (MainMenu)");
             nextSceneIndex = 0;
         }
         else
         {
-            Debug.Log($"[LevelExit] Loading next level: Scene {nextSceneIndex}");
-            
             // Check if next level is unlocked before loading
             yield return StartCoroutine(CheckAndLoadNextLevel(nextSceneIndex));
             yield break; // Exit early if level check handled loading
@@ -121,7 +111,6 @@ public class LevelExit : MonoBehaviour
         
         // Hide overlay in the new scene (try to find it in the new scene)
         ShowLoadingOverlay(false);
-        Debug.Log("[LevelExit] Scene loaded, loading overlay hidden, input re-enabled");
     }
     
     private void ShowLoadingOverlay(bool show)
@@ -163,33 +152,30 @@ public class LevelExit : MonoBehaviour
             }
         }
         
-        if (overlayGO != null)
-        {
-            overlayGO.SetActive(show);
-            
-            // Block raycasts when showing overlay to prevent UI input
-            var canvasGroup = overlayGO.GetComponent<CanvasGroup>();
-            if (canvasGroup != null)
+            if (overlayGO != null)
             {
-                canvasGroup.blocksRaycasts = show;
-                canvasGroup.interactable = show;
+                overlayGO.SetActive(show);
+                
+                // Block raycasts when showing overlay to prevent UI input
+                var canvasGroup = overlayGO.GetComponent<CanvasGroup>();
+                if (canvasGroup != null)
+                {
+                    canvasGroup.blocksRaycasts = show;
+                    canvasGroup.interactable = show;
+                }
+                else
+                {
+                    // If no CanvasGroup, try to add one or use Image component
+                    var image = overlayGO.GetComponent<UnityEngine.UI.Image>();
+                    if (image != null)
+                    {
+                        image.raycastTarget = show;
+                    }
+                }
             }
             else
             {
-                // If no CanvasGroup, try to add one or use Image component
-                var image = overlayGO.GetComponent<UnityEngine.UI.Image>();
-                if (image != null)
-                {
-                    image.raycastTarget = show;
-                }
             }
-            
-            Debug.Log($"[LevelExit] Loading overlay {(show ? "shown" : "hidden")} (blocksRaycasts: {show}, Scene: {overlayGO.scene.name})");
-        }
-        else
-        {
-            Debug.LogWarning("[LevelExit] Loading overlay not found! Please assign it in Inspector or create one in Canvas.");
-        }
     }
 
     private IEnumerator CheckAndLoadNextLevel(int nextSceneIndex)
@@ -208,7 +194,6 @@ public class LevelExit : MonoBehaviour
 
         if (string.IsNullOrEmpty(nextSceneName))
         {
-            Debug.LogWarning("[LevelExit] Cannot determine next scene name, loading anyway");
             yield break;
         }
 
@@ -224,7 +209,6 @@ public class LevelExit : MonoBehaviour
         var levelProgressManager = LevelProgressManager.Instance;
         if (levelProgressManager == null)
         {
-            Debug.LogWarning("[LevelExit] LevelProgressManager not found, loading level anyway");
             yield break;
         }
 
@@ -248,7 +232,6 @@ public class LevelExit : MonoBehaviour
 
         if (string.IsNullOrEmpty(nextLevelId) || nextLevelData == null)
         {
-            Debug.LogWarning($"[LevelExit] Cannot find level data for scene '{nextSceneName}', loading anyway");
             yield break;
         }
 
@@ -266,8 +249,6 @@ public class LevelExit : MonoBehaviour
                 ? $"Level '{nextLevelData.levelName}' is locked. Requires {nextLevelData.requiredScoreToUnlock} total score. Your score: {playerTotalScore}"
                 : $"Level '{nextLevelData.levelName}' is locked.";
             
-            Debug.LogWarning($"[LevelExit] {message}");
-            
             // Hide loading overlay
             ShowLoadingOverlay(false);
             IsLoading = false;
@@ -280,9 +261,8 @@ public class LevelExit : MonoBehaviour
             SceneManager.LoadScene(0);
             yield break;
         }
-
+        
         // Level is unlocked - proceed with loading
-        Debug.Log($"[LevelExit] Next level '{nextLevelData.levelName}' is unlocked, loading...");
         
         // Update currentLevel in GameProfile to the next level
         if (LevelProgressManager.Instance != null && !string.IsNullOrEmpty(nextLevelId))
@@ -318,7 +298,6 @@ public class LevelExit : MonoBehaviour
         
         IsLoading = false;
         ShowLoadingOverlay(false);
-        Debug.Log("[LevelExit] Scene loaded, loading overlay hidden, input re-enabled");
     }
 
     private IEnumerator GetPlayerTotalScore(string userId, System.Action<int> onResult)

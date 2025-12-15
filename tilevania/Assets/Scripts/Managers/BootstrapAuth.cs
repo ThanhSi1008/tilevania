@@ -17,7 +17,6 @@ public class BootstrapAuth : MonoBehaviour
 
     void Start()
     {
-        Debug.Log("[BootstrapAuth] Start - begin auto-login check");
         StartCoroutine(AutoLoginRoutine());
     }
 
@@ -29,7 +28,6 @@ public class BootstrapAuth : MonoBehaviour
         // Check if AuthManager exists and has token
         if (AuthManager.Instance == null)
         {
-            Debug.LogWarning("AuthManager.Instance is null. Showing login panel.");
             ShowLoginPanel();
             SetLoading(false);
             yield break;
@@ -37,7 +35,6 @@ public class BootstrapAuth : MonoBehaviour
 
         if (!AuthManager.Instance.HasToken())
         {
-            Debug.Log("[BootstrapAuth] No token found. Showing login panel.");
             ShowLoginPanel();
             SetLoading(false);
             yield break;
@@ -53,12 +50,10 @@ public class BootstrapAuth : MonoBehaviour
         // Handle validation result
         if (isValid && AuthManager.Instance.CurrentPlayer != null)
         {
-            Debug.Log($"[BootstrapAuth] Auto-login successful. User: {AuthManager.Instance.CurrentPlayer.username}");
             ShowMainMenu();
         }
         else
         {
-            Debug.Log("[BootstrapAuth] Auto-login failed. Token invalid or expired. Showing login panel.");
             AuthManager.Instance?.ClearAuth();
             ShowLoginPanel();
         }
@@ -68,13 +63,9 @@ public class BootstrapAuth : MonoBehaviour
 
     public void ShowLoginPanel()
     {
-        Debug.Log($"[BootstrapAuth] ShowLoginPanel called - loginPanel: {loginPanel?.name ?? "NULL"}, registerPanel: {registerPanel?.name ?? "NULL"}, mainMenuPanel: {mainMenuPanel?.name ?? "NULL"}");
-        
         if (loginPanel != null)
         {
             loginPanel.SetActive(true);
-            Debug.Log($"[BootstrapAuth] Set loginPanel active: {loginPanel.name}");
-            
             // Clear login input fields when showing login panel (e.g., after logout)
             var loginManager = loginPanel.GetComponent<LoginManager>();
             if (loginManager != null)
@@ -84,23 +75,19 @@ public class BootstrapAuth : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[BootstrapAuth] loginPanel is NULL!");
         }
         
         if (registerPanel != null)
         {
             registerPanel.SetActive(false);
-            Debug.Log($"[BootstrapAuth] Set registerPanel inactive: {registerPanel.name}");
         }
         
         if (mainMenuPanel != null)
         {
             mainMenuPanel.SetActive(false);
-            Debug.Log($"[BootstrapAuth] Set mainMenuPanel inactive: {mainMenuPanel.name}");
         }
         else
         {
-            Debug.LogError("[BootstrapAuth] mainMenuPanel is NULL! Cannot hide main menu panel.");
         }
     }
 

@@ -154,9 +154,8 @@ public class MainMenuManager : MonoBehaviour
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Debug.LogWarning($"[MainMenuManager] Failed to parse game profile: {ex.Message}");
             }
         }
 
@@ -188,7 +187,6 @@ public class MainMenuManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[MainMenuManager] Leaderboard panel not assigned!");
         }
     }
 
@@ -201,14 +199,11 @@ public class MainMenuManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[MainMenuManager] Achievements panel not assigned!");
         }
     }
 
     public void OnLogoutClicked()
     {
-        Debug.Log("[MainMenuManager] Logout clicked - clearing auth and returning to login");
-        
         // Ensure we always have a reference to the main menu object (fallback to this)
         var mainMenuObj = mainMenuPanel != null ? mainMenuPanel : gameObject;
         
@@ -219,31 +214,25 @@ public class MainMenuManager : MonoBehaviour
         var bootstrapAuth = FindFirstObjectByType<BootstrapAuth>();
         if (bootstrapAuth != null)
         {
-            Debug.Log("[MainMenuManager] Using BootstrapAuth.ShowLoginPanel() to switch panels");
             bootstrapAuth.ShowLoginPanel();
         }
         else
         {
             // Fallback: Try using direct panel references
-            Debug.LogWarning("[MainMenuManager] BootstrapAuth not found, using direct panel references");
             if (loginPanel != null)
             {
-                Debug.Log($"[MainMenuManager] Setting loginPanel active: {loginPanel.name}");
                 loginPanel.SetActive(true);
             }
             if (registerPanel != null)
             {
-                Debug.Log($"[MainMenuManager] Setting registerPanel inactive: {registerPanel.name}");
                 registerPanel.SetActive(false);
             }
             if (mainMenuPanel != null)
             {
-                Debug.Log($"[MainMenuManager] Setting mainMenuPanel inactive: {mainMenuPanel.name}");
                 mainMenuPanel.SetActive(false);
             }
             else
             {
-                Debug.LogWarning("[MainMenuManager] mainMenuPanel reference is NULL! Falling back to this GameObject.");
                 mainMenuObj.SetActive(false);
             }
         }
@@ -255,7 +244,6 @@ public class MainMenuManager : MonoBehaviour
         // Try both direct reference and via BootstrapAuth
         if (mainMenuObj != null && mainMenuObj.activeSelf)
         {
-            Debug.LogWarning($"[MainMenuManager] mainMenuPanel was still active after RefreshUI! Forcing it inactive: {mainMenuObj.name}");
             mainMenuObj.SetActive(false);
         }
         
@@ -264,8 +252,6 @@ public class MainMenuManager : MonoBehaviour
         {
             bootstrapAuth.ShowLoginPanel(); // Call again to ensure panels are in correct state
         }
-        
-        Debug.Log("[MainMenuManager] Logout complete - loginPanel should be visible, mainMenuPanel should be hidden");
     }
 
     // Called when PlayButton is clicked - loads gameplay scene

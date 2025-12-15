@@ -25,7 +25,6 @@ public class AuthManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
         Token = LoadToken();
-        Debug.Log($"[AuthManager] Awake - loaded token null? {string.IsNullOrEmpty(Token)}");
     }
 
     public bool HasToken() => !string.IsNullOrEmpty(Token);
@@ -35,7 +34,6 @@ public class AuthManager : MonoBehaviour
         Token = token;
         CurrentPlayer = player;
         SaveToken(token);
-        Debug.Log($"[AuthManager] SetAuth - token saved length={token?.Length ?? 0}, user={player?.username}");
     }
 
     public void ClearAuth()
@@ -43,7 +41,6 @@ public class AuthManager : MonoBehaviour
         Token = null;
         CurrentPlayer = null;
         PlayerPrefs.DeleteKey(prefsKey);
-        Debug.Log("[AuthManager] ClearAuth - token cleared");
     }
 
     public Dictionary<string, string> BuildAuthHeaders()
@@ -89,9 +86,8 @@ public class AuthManager : MonoBehaviour
                     ok = false;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Debug.LogWarning($"[AuthManager] Failed to parse user response: {ex.Message}. Raw: {apiResult.data}");
                 ok = false;
             }
         }
@@ -128,7 +124,6 @@ public class AuthManager : MonoBehaviour
         var encrypted = Encrypt(token);
         PlayerPrefs.SetString(prefsKey, encrypted);
         PlayerPrefs.Save();
-        Debug.Log($"[AuthManager] SaveToken - encrypted length={encrypted.Length}");
     }
 
     private string LoadToken()
@@ -136,7 +131,6 @@ public class AuthManager : MonoBehaviour
         if (!PlayerPrefs.HasKey(prefsKey)) return null;
         var encrypted = PlayerPrefs.GetString(prefsKey);
         var decrypted = string.IsNullOrEmpty(encrypted) ? null : Decrypt(encrypted);
-        Debug.Log($"[AuthManager] LoadToken - hasKey={PlayerPrefs.HasKey(prefsKey)}, encryptedLen={encrypted?.Length ?? 0}, decryptedNull={decrypted==null}");
         return decrypted;
     }
 

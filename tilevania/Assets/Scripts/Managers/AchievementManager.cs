@@ -76,20 +76,15 @@ public class AchievementManager : MonoBehaviour
 
     public IEnumerator RefreshUnlocked(bool showNotifications)
     {
-        Debug.Log($"[Achievement] RefreshUnlocked called - showNotifications={showNotifications}");
-        
         if (!HasAuth())
         {
-            Debug.LogWarning("[Achievement] ❌ Cannot refresh - user not authenticated");
             yield break;
         }
 
         var previousUnlockedIds = new HashSet<string>(unlocked.Where(u => u.achievementId != null).Select(u => u.achievementId._id));
-        Debug.Log($"[Achievement] Previous unlocked count: {previousUnlockedIds.Count}");
 
         APIResponse<string> apiResult = null;
         var userId = AuthManager.Instance.CurrentPlayer.userId;
-        Debug.Log($"[Achievement] Fetching unlocked achievements for userId={userId}...");
         yield return APIClient.Get(APIConfig.PlayerAchievements(userId), r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
 
         if (apiResult != null && apiResult.success && !string.IsNullOrEmpty(apiResult.data))
@@ -101,28 +96,9 @@ public class AchievementManager : MonoBehaviour
                 if (parsed != null && parsed.achievements != null)
                 {
                     unlocked.AddRange(parsed.achievements);
-                    Debug.Log($"[Achievement] ✅ Fetched {unlocked.Count} unlocked achievements");
-                    
-                    // Debug: Log achievement details to verify structure
-                    foreach (var item in unlocked)
-                    {
-                        if (item?.achievementId != null)
-                        {
-                            Debug.Log($"[Achievement] Found achievement: {item.achievementId.name} (id: {item.achievementId._id})");
-                        }
-                        else
-                        {
-                            Debug.LogWarning($"[Achievement] ⚠️ Achievement item has null achievementId! Item id: {item?._id}");
-                        }
-                    }
                 }
                 else
                 {
-                    Debug.Log("[Achievement] No achievements in response");
-                    if (parsed == null)
-                    {
-                        Debug.LogWarning($"[Achievement] ⚠️ Parsed response is null. Raw data: {apiResult.data}");
-                    }
                 }
 
                 if (showNotifications)
@@ -130,45 +106,38 @@ public class AchievementManager : MonoBehaviour
                     int newUnlocks = 0;
                     foreach (var item in unlocked)
                     {
-                        var id = item?.achievementId?._id;
-                        if (string.IsNullOrEmpty(id))
-                        {
-                            Debug.LogWarning($"[Achievement] ⚠️ Skipping achievement with null/empty id. Item: {item?._id}");
-                            continue;
-                        }
-                        
+                                var id = item?.achievementId?._id;
+                                if (string.IsNullOrEmpty(id))
+                                {
+                                    continue;
+                                }
+                                
                         if (!previousUnlockedIds.Contains(id))
                         {
                             newUnlocks++;
                             var name = item.achievementId?.name ?? "Unknown";
                             var desc = item.achievementId?.description ?? "";
-                            Debug.Log($"[Achievement] 🎉 NEW ACHIEVEMENT UNLOCKED: {name} - {desc}");
                             ShowNotification(name, desc);
+                        }
+                                else
+                                {
+                                }
+                    }
+                    
+                        if (newUnlocks > 0)
+                        {
                         }
                         else
                         {
-                            Debug.Log($"[Achievement] Achievement {id} was already unlocked, skipping notification");
                         }
-                    }
-                    
-                    if (newUnlocks > 0)
-                    {
-                        Debug.Log($"[Achievement] ✅ Showed {newUnlocks} achievement notification(s)");
-                    }
-                    else
-                    {
-                        Debug.Log($"[Achievement] No new achievements to show (previous: {previousUnlockedIds.Count}, current: {unlocked.Count})");
-                    }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Debug.LogWarning($"[Achievement] ❌ Failed to parse unlocked list: {ex.Message} body={apiResult.data}");
             }
         }
         else
         {
-            Debug.LogWarning($"[Achievement] ❌ Fetch unlocked failed - status={(int?)apiResult?.statusCode}, error={apiResult?.error}, data={apiResult?.data}");
         }
     }
 

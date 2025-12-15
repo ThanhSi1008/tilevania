@@ -8,17 +8,43 @@ using UnityEngine.UI;
 public class LoginManager : MonoBehaviour
 {
     [Header("Inputs")]
+    [Tooltip("Email input field that will be sent to /api/auth/login.")]
     [SerializeField] private TMP_InputField emailInput;
+    [Tooltip("Password input field.")]
     [SerializeField] private TMP_InputField passwordInput;
 
     [Header("UI")]
+    [Tooltip("Login button. Should call OnLoginButtonClicked() on click.")]
     [SerializeField] private Button loginButton;
+    [Tooltip("Overlay shown while waiting for the login API (typically a fullscreen panel).")]
     [SerializeField] private GameObject loadingOverlay;
+    [Tooltip("Text used to display login status / error messages to the player.")]
     [SerializeField] private TextMeshProUGUI statusText;
+    [Tooltip("Login panel (will be hidden after successful login).")]
     [SerializeField] private GameObject loginPanel;
+    [Tooltip("Register panel (will be shown when player clicks the 'Register' button).")]
     [SerializeField] private GameObject registerPanel;
+    [Tooltip("Main Menu panel (will be shown after successful login).")]
     [SerializeField] private GameObject mainMenuPanel;
+    [Tooltip("Reference to MainMenuManager to call RefreshUI after login.")]
     [SerializeField] private MainMenuManager mainMenuManager;
+
+    [Header("Usage Instructions (Editor)")]
+    [TextArea(3, 6)]
+    [SerializeField] private string usageInstructions =
+        "- Attach LoginManager to a GameObject in the AuthScene.\n" +
+        "- Assign emailInput and passwordInput to the two TMP_InputField components on your UI.\n" +
+        "- Assign loginButton and add an OnClick event -> LoginManager.OnLoginButtonClicked.\n" +
+        "- Assign loadingOverlay (a fullscreen panel). It should be disabled by default.\n" +
+        "- Assign statusText (TextMeshProUGUI) to display errors: invalid credentials, network issues, etc.\n" +
+        "- Assign loginPanel, registerPanel, and mainMenuPanel to the corresponding UI panels.\n" +
+        "- Make sure AuthManager exists in the scene and APIConfig.API_BASE_URL points to your GameServer.";
+
+    // This is only used in the Inspector as documentation; this read avoids CS0414 warning.
+    private void Awake()
+    {
+        _ = usageInstructions;
+    }
 
     [Serializable]
     private class LoginRequest
@@ -72,41 +98,55 @@ public class LoginManager : MonoBehaviour
             passwordInput.text = string.Empty;
         }
         SetStatus(string.Empty);
-        Debug.Log("[LoginManager] Input fields cleared");
     }
 
     private IEnumerator LoginRoutine()
     {
-        SetLoading(true, "Signing in...");
+        SetLoading(true);
+        SetStatus("");
 
         var email = emailInput != null ? emailInput.text.Trim() : string.Empty;
         var pass = passwordInput != null ? passwordInput.text : string.Empty;
 
         if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(pass))
         {
-            SetLoading(false, "Email và mật khẩu không được trống");
+            SetLoading(false);
+            SetStatus("Email and password must not be empty.");
+            yield break;
+        }
+
+        // Basic client-side validation to catch common input errors early
+        if (!email.Contains("@") || !email.Contains("."))
+        {
+            SetLoading(false);
+            SetStatus("Please enter a valid email address.");
+            yield break;
+        }
+
+        if (pass.Length < 6)
+        {
+            SetLoading(false);
+            SetStatus("Password must be at least 6 characters long.");
             yield break;
         }
 
         var payload = new LoginRequest { email = email, password = pass };
-
+        
         var json = JsonUtility.ToJson(payload);
-        Debug.Log($"[LoginManager] Attempting login - Email: {email}, URL: {APIConfig.API_BASE_URL}/api/auth/login");
         
         APIResponse<string> apiResult = null;
         // Auth headers không cần cho login; gửi request trần để tránh token cũ ảnh hưởng
         yield return APIClient.Post("/api/auth/login", json, r => apiResult = r, null);
 
         HandleLoginResponse(apiResult);
-        SetLoading(false, string.Empty);
+        SetLoading(false);
     }
 
     private void HandleLoginResponse(APIResponse<string> apiResult)
     {
         if (apiResult == null)
         {
-            SetStatus("Login failed: no response from server");
-            Debug.LogError("[LoginManager] API response is null - server may be unreachable");
+            SetStatus("Login failed: no response from server.");
             return;
         }
 
@@ -118,38 +158,53 @@ public class LoginManager : MonoBehaviour
                 apiResult.statusCode == HttpStatusCode.BadGateway ||
                 (int)apiResult.statusCode == 0)
             {
-                userMessage = "Cannot connect to server. Please check your internet connection and try again.";
+                userMessage = "Cannot connect to server. Please check your internet connection or GameServer.";
             }
             else if (apiResult.statusCode == HttpStatusCode.RequestTimeout)
             {
                 userMessage = "Request timeout. Server may be slow or unreachable.";
             }
-            else if (apiResult.statusCode == HttpStatusCode.Unauthorized)
+            // Many backends use 401 or 400 for invalid credentials
+            else if (apiResult.statusCode == HttpStatusCode.Unauthorized ||
+                     apiResult.statusCode == HttpStatusCode.BadRequest)
             {
                 userMessage = "Invalid email or password.";
             }
             else if (apiResult.statusCode == HttpStatusCode.NotFound)
             {
-                userMessage = "Login endpoint not found. Server may be misconfigured.";
+                userMessage = "Login endpoint not found. Please verify the API configuration.";
             }
             else
             {
-                userMessage = !string.IsNullOrEmpty(apiResult.error)
+                // Try to detect invalid credentials from server message
+                var raw = !string.IsNullOrEmpty(apiResult.error)
                     ? apiResult.error
-                    : (!string.IsNullOrEmpty(apiResult.data) ? apiResult.data : "Unknown error occurred");
+                    : (apiResult.data ?? string.Empty);
+
+                if (!string.IsNullOrEmpty(raw) &&
+                    raw.IndexOf("invalid", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    (raw.IndexOf("password", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     raw.IndexOf("credential", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    userMessage = "Invalid email or password.";
+                }
+                else
+                {
+                    userMessage = !string.IsNullOrEmpty(apiResult.error)
+                        ? apiResult.error
+                        : (!string.IsNullOrEmpty(apiResult.data) ? apiResult.data : "Unknown error from server.");
+                }
             }
 
             SetStatus($"Login error: {userMessage}");
-            Debug.LogWarning($"[LoginManager] Login failed - StatusCode: {(int)apiResult.statusCode} ({apiResult.statusCode}), " +
-                           $"Error: {apiResult.error}, Body: {apiResult.data}");
             return;
         }
 
         var response = JsonUtility.FromJson<LoginResponse>(apiResult.data ?? "{}");
         if (response == null || string.IsNullOrEmpty(response.token))
         {
-            SetStatus("Login failed: invalid server response");
-            Debug.LogWarning($"Login parse failed. Raw body: {apiResult.data}");
+            // Treat missing token as invalid credentials from player perspective
+            SetStatus("Login failed: invalid email or password.");
             return;
         }
 
@@ -161,8 +216,7 @@ public class LoginManager : MonoBehaviour
         };
 
         AuthManager.Instance?.SetAuth(response.token, player);
-        SetStatus("Login successful");
-        Debug.Log($"[Login] success user={player.username} tokenLen={response.token?.Length ?? 0}");
+        SetStatus("Login successful!");
 
         // Switch to main menu
         if (loginPanel != null) loginPanel.SetActive(false);
@@ -171,11 +225,10 @@ public class LoginManager : MonoBehaviour
         mainMenuManager?.RefreshUI();
     }
 
-    private void SetLoading(bool isLoading, string message)
+    private void SetLoading(bool isLoading)
     {
         if (loadingOverlay != null) loadingOverlay.SetActive(isLoading);
         if (loginButton != null) loginButton.interactable = !isLoading;
-        SetStatus(message);
     }
 
     private void SetStatus(string message)

@@ -36,7 +36,7 @@ const updateGameProfile = async (req, res) => {
     
     // Log if currentLevel is being updated
     if (updateData.currentLevel) {
-      console.log(`[GameProfile] ⚠️ Updating currentLevel to: ${updateData.currentLevel} for userId: ${userId}`);
+      // console.log(`[GameProfile] ⚠️ Updating currentLevel to: ${updateData.currentLevel} for userId: ${userId}`);
     }
 
     const gameProfile = await GameProfile.findOneAndUpdate(
@@ -53,7 +53,7 @@ const updateGameProfile = async (req, res) => {
       });
     }
 
-    console.log(`[GameProfile] ✅ Game profile updated successfully - userId: ${userId}, currentLevel: ${gameProfile.currentLevel ? `${gameProfile.currentLevel.levelName} (${gameProfile.currentLevel.levelNumber})` : 'null'}`);
+    // console.log(`[GameProfile] ✅ Game profile updated successfully - userId: ${userId}, currentLevel: ${gameProfile.currentLevel ? `${gameProfile.currentLevel.levelName} (${gameProfile.currentLevel.levelNumber})` : 'null'}`);
 
     return res.status(200).json({
       message: 'Game profile updated successfully',

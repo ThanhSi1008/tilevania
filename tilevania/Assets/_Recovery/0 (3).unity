@@ -7959,7 +7959,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 161.52002, y: 67.54001}
+  m_AnchoredPosition: {x: 161.52002, y: 67.54004}
   m_SizeDelta: {x: 323.04, y: 240.81}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!225 &1666161707
@@ -11034,11 +11034,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4745624468738247666, guid: a33bedbb033ab6d49a20c68439bca624, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -12.816262
+      value: -12.929147
       objectReference: {fileID: 0}
     - target: {fileID: 4745624468738247666, guid: a33bedbb033ab6d49a20c68439bca624, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.81004
+      value: 0.80973
       objectReference: {fileID: 0}
     - target: {fileID: 4745624468738247666, guid: a33bedbb033ab6d49a20c68439bca624, type: 3}
       propertyPath: m_LocalPosition.z

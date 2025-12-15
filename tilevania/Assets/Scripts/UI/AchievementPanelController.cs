@@ -46,9 +46,6 @@ public class AchievementPanelController : MonoBehaviour
         {
             if (scrollRect.content == null)
             {
-                Debug.LogWarning($"[AchievementPanel] ScrollRect on '{scrollRect.gameObject.name}' has no Content assigned! " +
-                              "Attempting to auto-find Content...");
-                
                 // Try to find Content automatically
                 var viewport = scrollRect.viewport;
                 if (viewport != null)
@@ -65,23 +62,20 @@ public class AchievementPanelController : MonoBehaviour
                     }
                     
                     // If not found, use first child
-                    if (contentTransform == null && viewport.transform.childCount > 0)
-                    {
-                        contentTransform = viewport.transform.GetChild(0);
-                    }
-                    
-                    if (contentTransform != null)
-                    {
-                        scrollRect.content = contentTransform.GetComponent<RectTransform>();
-                        Debug.Log($"[AchievementPanel] ✅ Auto-assigned Content for ScrollRect on '{scrollRect.gameObject.name}': {contentTransform.name}");
-                    }
+                        if (contentTransform == null && viewport.transform.childCount > 0)
+                        {
+                            contentTransform = viewport.transform.GetChild(0);
+                        }
+                        
+                        if (contentTransform != null)
+                        {
+                            scrollRect.content = contentTransform.GetComponent<RectTransform>();
+                        }
                 }
                 
                 // If still no content, disable the ScrollRect to prevent errors
                 if (scrollRect.content == null)
                 {
-                    Debug.LogError($"[AchievementPanel] ❌ Could not find Content for ScrollRect on '{scrollRect.gameObject.name}'. " +
-                                  "Disabling ScrollRect to prevent errors. Please manually assign Content in the Inspector.");
                     scrollRect.enabled = false;
                 }
             }
@@ -91,7 +85,6 @@ public class AchievementPanelController : MonoBehaviour
                 if (!scrollRect.enabled)
                 {
                     scrollRect.enabled = true;
-                    Debug.Log($"[AchievementPanel] ✅ Re-enabled ScrollRect on '{scrollRect.gameObject.name}' (Content is now assigned)");
                 }
             }
         }
@@ -105,7 +98,6 @@ public class AchievementPanelController : MonoBehaviour
     {
         if (achievementPanel == null)
         {
-            Debug.LogWarning("[AchievementPanel] AchievementPanel GameObject is not assigned!");
             return;
         }
 
@@ -169,7 +161,6 @@ public class AchievementPanelController : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[AchievementPanel] AchievementManager.Instance is null!");
         }
 
         // Update the list UI
@@ -179,7 +170,6 @@ public class AchievementPanelController : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[AchievementPanel] AchievementListUI is not assigned!");
         }
 
         SetLoading(false);

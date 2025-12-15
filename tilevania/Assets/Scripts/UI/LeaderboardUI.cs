@@ -14,7 +14,7 @@ public class LeaderboardUI : MonoBehaviour
     [SerializeField] private Toggle dailyTab;
     [SerializeField] private Transform leaderboardContent;
     [SerializeField] private GameObject leaderboardEntryPrefab;
-    [SerializeField] private TextMeshProUGUI loadingText;
+    [SerializeField] private GameObject loading;
     [SerializeField] private TextMeshProUGUI emptyText;
 
     [Header("Settings")]
@@ -29,7 +29,6 @@ public class LeaderboardUI : MonoBehaviour
         leaderboardManager = LeaderboardManager.Instance;
         if (leaderboardManager == null)
         {
-            Debug.LogError("[LeaderboardUI] LeaderboardManager.Instance is null!");
             return;
         }
 
@@ -90,7 +89,6 @@ public class LeaderboardUI : MonoBehaviour
     {
         if (isLoading)
         {
-            Debug.Log("[LeaderboardUI] Already loading, skipping...");
             return;
         }
 
@@ -110,8 +108,6 @@ public class LeaderboardUI : MonoBehaviour
             currentUserId = AuthManager.Instance.CurrentPlayer.userId;
         }
 
-        Debug.Log($"[LeaderboardUI] Start load period={period}, userId={currentUserId ?? "NULL"}");
-
         // Fetch leaderboard
         StartCoroutine(LoadLeaderboardCoroutine(period, currentUserId));
     }
@@ -124,19 +120,9 @@ public class LeaderboardUI : MonoBehaviour
         isLoading = false;
         SetLoadingState(false);
 
-        if (entries == null)
-        {
-            Debug.LogWarning($"[LeaderboardUI] entries is NULL after fetch for {period}");
-        }
-        else
-        {
-            Debug.Log($"[LeaderboardUI] entries.Count={entries.Count} for {period}");
-        }
-
         if (entries == null || entries.Count == 0)
         {
             SetEmptyState(true);
-            Debug.Log($"[LeaderboardUI] No entries found for {period}");
             yield break;
         }
 
@@ -162,12 +148,10 @@ public class LeaderboardUI : MonoBehaviour
                 }
                 else
                 {
-                    Debug.LogWarning("[LeaderboardUI] LeaderboardEntryUI component not found on prefab!");
+                    // Missing LeaderboardEntryUI component on prefab
                 }
             }
         }
-
-        Debug.Log($"[LeaderboardUI] ✅ Loaded {entries.Count} entries for {period}");
     }
 
     private void ClearEntries()
@@ -182,9 +166,9 @@ public class LeaderboardUI : MonoBehaviour
 
     private void SetLoadingState(bool loading)
     {
-        if (loadingText != null)
+        if (this.loading != null)
         {
-            loadingText.gameObject.SetActive(loading);
+            this.loading.SetActive(loading);
         }
     }
 
@@ -209,9 +193,8 @@ public class LeaderboardUI : MonoBehaviour
         }
     }
 
-    private void OnRefreshClicked()
+    public void OnRefreshClicked()
     {
-        // Clear cache and reload
         if (leaderboardManager != null)
         {
             leaderboardManager.ClearCache(currentTab);
