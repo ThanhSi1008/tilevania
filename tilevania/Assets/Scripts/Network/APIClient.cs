@@ -94,19 +94,6 @@ public static class APIClient
             statusCode = statusCode
         };
 
-        // Log detailed error information for debugging
-        if (!isSuccess)
-        {
-            Debug.LogError($"[APIClient] Request failed - URL: {url}, Method: {method}, " +
-                          $"Result: {request.result}, Error: {request.error}, " +
-                          $"ResponseCode: {request.responseCode}, StatusCode: {statusCode}, " +
-                          $"Body: {response.data}");
-        }
-        else
-        {
-            Debug.Log($"[APIClient] Request success - URL: {url}, StatusCode: {statusCode}");
-        }
-
         onComplete?.Invoke(response);
         request.Dispose();
     }

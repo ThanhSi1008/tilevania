@@ -1,7 +1,25 @@
 const mongoose = require('mongoose');
 require('dotenv').config({ path: '/Users/xis108/Desktop/ntap/GameServer/.env' });
 
-const { Level, Achievement } = require('../models');
+const { Level, Achievement, User, GameProfile } = require('../models');
+const { calculateLeaderboards } = require('../controllers/leaderboardController');
+
+// Simple helper to create users sequentially (so password pre-save hook runs)
+const createUserIfMissing = async (user) => {
+  const existing = await User.findOne({ email: user.email });
+  if (existing) return existing;
+  const created = await User.create(user);
+  console.log(`   - Created user ${created.username} (${created.email})`);
+  return created;
+};
+
+const createGameProfileIfMissing = async (userId, profile) => {
+  const existing = await GameProfile.findOne({ userId });
+  if (existing) return existing;
+  const created = await GameProfile.create({ userId, ...profile });
+  console.log(`   - Created game profile for userId=${userId} score=${profile.totalScore}`);
+  return created;
+};
 
 const seedDatabase = async () => {
   try {
@@ -125,6 +143,51 @@ const seedDatabase = async () => {
     } else {
       console.log('⏭️  Achievements already seeded, skipping...\n');
     }
+
+    // Seed demo users & profiles for leaderboard
+    const defaultUsers = [
+      { username: 'alice', email: 'alice@example.com', passwordHash: 'Password123!' , profileImage: null },
+      { username: 'bob',   email: 'bob@example.com',   passwordHash: 'Password123!' , profileImage: null },
+      { username: 'carol', email: 'carol@example.com', passwordHash: 'Password123!' , profileImage: null },
+      { username: 'dave',  email: 'dave@example.com',  passwordHash: 'Password123!' , profileImage: null },
+    ];
+
+    const seededUsers = [];
+    for (const u of defaultUsers) {
+      const created = await createUserIfMissing(u);
+      seededUsers.push(created);
+    }
+
+    // Attach game profiles with scores for leaderboard
+    const demoProfiles = [
+      { email: 'alice@example.com', totalScore: 5200, totalCoinsCollected: 800, totalEnemiesDefeated: 120 },
+      { email: 'bob@example.com',   totalScore: 3400, totalCoinsCollected: 500, totalEnemiesDefeated: 90 },
+      { email: 'carol@example.com', totalScore: 2100, totalCoinsCollected: 300, totalEnemiesDefeated: 60 },
+      { email: 'dave@example.com',  totalScore: 900,  totalCoinsCollected: 120, totalEnemiesDefeated: 20 },
+    ];
+
+    for (const profile of demoProfiles) {
+      const user = await User.findOne({ email: profile.email });
+      if (!user) {
+        console.warn(`⚠️  Skipping profile seed, user not found: ${profile.email}`);
+        continue;
+      }
+
+      await createGameProfileIfMissing(user._id, {
+        totalScore: profile.totalScore,
+        totalCoinsCollected: profile.totalCoinsCollected,
+        totalEnemiesDefeated: profile.totalEnemiesDefeated,
+        totalDeaths: 0,
+        totalPlayTime: 0,
+        currentLives: 3,
+        highestScoreAchieved: profile.totalScore,
+        lastSessionScore: profile.totalScore,
+      });
+    }
+
+    // Recalculate leaderboards from GameProfiles
+    await calculateLeaderboards();
+    console.log('\n✅ Leaderboards seeded from demo profiles.');
 
     console.log('\n✅ Database seeding completed!');
     process.exit(0);

@@ -1,0 +1,96 @@
+\documentclass[a4paper]{article}
+\usepackage{vntex}
+\usepackage{a4wide,amssymb,epsfig,latexsym,array,hhline,fancyhdr}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{multicol,longtable,amscd}
+\usepackage{diagbox}
+\usepackage{booktabs}
+\usepackage{alltt}
+\usepackage[framemethod=tikz]{mdframed}
+\usepackage{caption,subcaption}
+\usepackage{lastpage}
+\usepackage[lined,boxed,commentsnumbered]{algorithm2e}
+\usepackage{enumerate}
+\usepackage{color}
+\usepackage{graphicx}					
+\usepackage{array}
+\usepackage{tabularx, caption}
+\usepackage{svg}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{indentfirst}
+\usepackage{rotating}
+\usepackage{graphics}
+\usepackage{setspace}
+\usepackage{epsfig}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usetikzlibrary{arrows,snakes,backgrounds}
+\usepackage[unicode]{hyperref}
+\hypersetup{urlcolor=blue,linkcolor=black,citecolor=black,colorlinks=true} 
+\pagestyle{fancy}
+\usepackage[paper=a4paper,top=20mm,bottom=20mm,left=20mm,right=20mm]{geometry}
+\fancyhead{} 
+\fancyhf{} 
+\renewcommand\headrule{
+\begin{minipage}{1\textwidth}
+\hrule width \hsize \kern 1mm \hrule width \hsize height 2pt 
+\end{minipage}}
+\renewcommand\footrule{\begin{minipage}{1\textwidth}
+\hrule width \hsize height 2pt \kern 1mm \hrule width \hsize   
+\end{minipage}\par}
+\fancyfoot[L]{\normalsize \ttfamily Báo cáo cuối kỳ môn Công nghệ mới}
+\fancyfoot[C]{}
+\fancyfoot[R]{\normalsize \ttfamily Trang {\thepage}/\pageref{LastPage}}
+
+% Header: trái và phải
+\fancyhead[L]{\normalsize \ttfamily IUH-FIT-SE}
+% Căn sát phải tiêu đề dài, dùng headwidth để chiếm toàn bộ chiều rộng header
+\fancyhead[R]{\normalsize \ttfamily \makebox[\headwidth][r]{Công nghệ mới trong phát triển ứng dụng CNTT}}
+
+% Đảm bảo đủ chiều cao header để tránh cảnh báo headheight
+\setlength{\headheight}{21pt}
+
+\usepackage{blindtext}
+
+%--------------------------------------------------
+% Font, size, paragraph and line spacing settings
+%--------------------------------------------------
+% Sử dụng font tương đương Times New Roman
+\usepackage{mathptmx}
+
+% Cài đặt thụt đầu dòng, khoảng cách trước đoạn, line spacing
+\AtBeginDocument{%
+  \fontsize{13pt}{16pt}\selectfont% kích thước chữ ~13pt, leading 16pt
+  \setlength{\parindent}{0pt}% không thụt dòng đầu
+  \setlength{\leftskip}{1.2cm}% dịch toàn bộ đoạn vào 1.2cm
+  \setlength{\parskip}{6pt}% khoảng cách giữa các đoạn
+  \setstretch{1.3}% line spacing ~1.3
+}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\lstdefinestyle{mystyle}{
+  backgroundcolor=\color{backcolour}, commentstyle=\color{codegreen},
+  keywordstyle=\color{magenta},
+  numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},
+  basicstyle=\ttfamily\footnotesize,
+  breakatwhitespace=false,         
+  breaklines=true,                 
+  captionpos=b,                    
+  keepspaces=true,                 
+  numbers=left,                    
+  numbersep=5pt,                  
+  showspaces=false,                
+  showstringspaces=false,
+  showtabs=false,                  
+  tabsize=2
+}
+\lstset{style=mystyle}

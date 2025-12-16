@@ -72,12 +72,11 @@ public class LoginManager : MonoBehaviour
             passwordInput.text = string.Empty;
         }
         SetStatus(string.Empty);
-        Debug.Log("[LoginManager] Input fields cleared");
     }
 
     private IEnumerator LoginRoutine()
     {
-        SetLoading(true, "Signing in...");
+        SetLoading(true, "");
 
         var email = emailInput != null ? emailInput.text.Trim() : string.Empty;
         var pass = passwordInput != null ? passwordInput.text : string.Empty;
@@ -89,9 +88,8 @@ public class LoginManager : MonoBehaviour
         }
 
         var payload = new LoginRequest { email = email, password = pass };
-
+        
         var json = JsonUtility.ToJson(payload);
-        Debug.Log($"[LoginManager] Attempting login - Email: {email}, URL: {APIConfig.API_BASE_URL}/api/auth/login");
         
         APIResponse<string> apiResult = null;
         // Auth headers không cần cho login; gửi request trần để tránh token cũ ảnh hưởng
@@ -106,7 +104,6 @@ public class LoginManager : MonoBehaviour
         if (apiResult == null)
         {
             SetStatus("Login failed: no response from server");
-            Debug.LogError("[LoginManager] API response is null - server may be unreachable");
             return;
         }
 
@@ -140,8 +137,6 @@ public class LoginManager : MonoBehaviour
             }
 
             SetStatus($"Login error: {userMessage}");
-            Debug.LogWarning($"[LoginManager] Login failed - StatusCode: {(int)apiResult.statusCode} ({apiResult.statusCode}), " +
-                           $"Error: {apiResult.error}, Body: {apiResult.data}");
             return;
         }
 
@@ -149,7 +144,6 @@ public class LoginManager : MonoBehaviour
         if (response == null || string.IsNullOrEmpty(response.token))
         {
             SetStatus("Login failed: invalid server response");
-            Debug.LogWarning($"Login parse failed. Raw body: {apiResult.data}");
             return;
         }
 
@@ -162,7 +156,6 @@ public class LoginManager : MonoBehaviour
 
         AuthManager.Instance?.SetAuth(response.token, player);
         SetStatus("Login successful");
-        Debug.Log($"[Login] success user={player.username} tokenLen={response.token?.Length ?? 0}");
 
         // Switch to main menu
         if (loginPanel != null) loginPanel.SetActive(false);

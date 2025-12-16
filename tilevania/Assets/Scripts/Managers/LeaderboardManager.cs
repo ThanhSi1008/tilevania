@@ -69,7 +69,6 @@ public class LeaderboardManager : MonoBehaviour
         // Check cache first
         if (cache.ContainsKey(period) && cache[period].isValid(cacheDuration))
         {
-            Debug.Log($"[Leaderboard] Using cached data for {period}");
             onComplete?.Invoke(cache[period].entries);
             yield break;
         }
@@ -87,7 +86,9 @@ public class LeaderboardManager : MonoBehaviour
                 if (parsed != null && parsed.leaderboard != null)
                 {
                     entries.AddRange(parsed.leaderboard);
-                    Debug.Log($"[Leaderboard] ✅ Fetched {entries.Count} entries for {period}");
+                }
+                else
+                {
                 }
 
                 // Update cache
@@ -99,15 +100,13 @@ public class LeaderboardManager : MonoBehaviour
 
                 onComplete?.Invoke(entries);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Debug.LogWarning($"[Leaderboard] ❌ Failed to parse leaderboard: {ex.Message} body={apiResult.data}");
                 onComplete?.Invoke(new List<LeaderboardEntry>());
             }
         }
         else
         {
-            Debug.LogWarning($"[Leaderboard] ❌ Fetch failed - status={(int?)apiResult?.statusCode}, error={apiResult?.error}");
             onComplete?.Invoke(new List<LeaderboardEntry>());
         }
     }
@@ -125,24 +124,20 @@ public class LeaderboardManager : MonoBehaviour
                 var parsed = JsonUtility.FromJson<LeaderboardRank>(apiResult.data);
                 if (parsed != null && parsed.rank != null)
                 {
-                    Debug.Log($"[Leaderboard] ✅ Player rank: #{parsed.rank.rank} (score: {parsed.rank.totalScore})");
                     onComplete?.Invoke(parsed.rank);
                 }
                 else
                 {
-                    Debug.LogWarning($"[Leaderboard] Player not found in leaderboard for period {period}");
                     onComplete?.Invoke(null);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Debug.LogWarning($"[Leaderboard] ❌ Failed to parse player rank: {ex.Message} body={apiResult.data}");
                 onComplete?.Invoke(null);
             }
         }
         else
         {
-            Debug.LogWarning($"[Leaderboard] ❌ Get player rank failed - status={(int?)apiResult?.statusCode}, error={apiResult?.error}");
             onComplete?.Invoke(null);
         }
     }
@@ -152,12 +147,10 @@ public class LeaderboardManager : MonoBehaviour
         if (period != null)
         {
             cache.Remove(period);
-            Debug.Log($"[Leaderboard] Cleared cache for {period}");
         }
         else
         {
             cache.Clear();
-            Debug.Log("[Leaderboard] Cleared all cache");
         }
     }
 

@@ -63,12 +63,8 @@ public class LevelProgressManager : MonoBehaviour
 
     public IEnumerator ResolveLevelId(Scene scene, Action<string> onResolved)
     {
-        // Log early to debug - NEW CODE VERSION 2.0
-        Debug.Log($"[LevelProgress] ResolveLevelId called (V2.0) - scene.name='{scene.name}', buildIndex={scene.buildIndex}");
-        
         if (string.IsNullOrEmpty(AuthManager.Instance?.Token))
         {
-            Debug.LogWarning("[LevelProgress] No auth token, skipping ResolveLevelId");
             onResolved?.Invoke(null);
             yield break;
         }
@@ -76,23 +72,17 @@ public class LevelProgressManager : MonoBehaviour
         // Skip invalid scenes (buildIndex < 0 or empty scene name)
         // This can happen when scene is not fully loaded yet
         bool isInvalidScene = scene.buildIndex < 0 || string.IsNullOrEmpty(scene.name);
-        Debug.Log($"[LevelProgress] Checking scene validity - buildIndex={scene.buildIndex}, scene.name='{scene.name}', isInvalidScene={isInvalidScene}");
-        
         if (isInvalidScene)
         {
-            Debug.LogWarning($"[LevelProgress] ⚠️ Skipping invalid scene - scene.name='{scene.name}', buildIndex={scene.buildIndex}");
             onResolved?.Invoke(null);
             yield break;
         }
-        
-        Debug.Log($"[LevelProgress] Scene passed validation, proceeding with EnsureLevelsCached");
 
         yield return EnsureLevelsCached();
 
         // Re-validate scene after EnsureLevelsCached (scene might have changed during async operation)
         if (scene.buildIndex < 0 || string.IsNullOrEmpty(scene.name))
         {
-            Debug.LogWarning($"[LevelProgress] ⚠️ Scene became invalid after EnsureLevelsCached - scene.name='{scene.name}', buildIndex={scene.buildIndex}");
             onResolved?.Invoke(null);
             yield break;
         }
@@ -100,21 +90,12 @@ public class LevelProgressManager : MonoBehaviour
         // Double-check that levels were cached successfully
         if (sceneNameToLevelId.Count == 0 && levelNumberToLevelId.Count == 0)
         {
-            Debug.LogError("[LevelProgress] ❌ Levels cache is empty after EnsureLevelsCached!");
             onResolved?.Invoke(null);
             yield break;
         }
 
         string levelId = null;
         
-        // Debug: Log dictionary contents (scene is valid at this point)
-        Debug.Log($"[LevelProgress] Processing valid scene - scene.name='{scene.name}', buildIndex={scene.buildIndex}");
-        Debug.Log($"[LevelProgress] Dictionary sizes - sceneNameToLevelId: {sceneNameToLevelId.Count}, levelNumberToLevelId: {levelNumberToLevelId.Count}");
-        if (sceneNameToLevelId.Count > 0)
-        {
-            Debug.Log($"[LevelProgress] Available sceneNames: {string.Join(", ", sceneNameToLevelId.Keys)}");
-        }
-
         // Try scene name match first (more reliable than buildIndex)
         // This is the preferred method since scene names are explicit
         if (!string.IsNullOrEmpty(scene.name))
@@ -122,11 +103,9 @@ public class LevelProgressManager : MonoBehaviour
             if (sceneNameToLevelId.TryGetValue(scene.name, out var mappedByName))
             {
                 levelId = mappedByName;
-                Debug.Log($"[LevelProgress] ✅ Matched levelId by sceneName: '{scene.name}' -> levelId={levelId}");
             }
             else
             {
-                Debug.Log($"[LevelProgress] ❌ No match by sceneName: '{scene.name}' (not in dictionary)");
             }
         }
 
@@ -139,19 +118,10 @@ public class LevelProgressManager : MonoBehaviour
             if (levelNumberToLevelId.TryGetValue(expectedLevelNumber, out var mappedByNumber))
             {
                 levelId = mappedByNumber;
-                Debug.Log($"[LevelProgress] ✅ Matched levelId by levelNumber: buildIndex={scene.buildIndex} -> levelNumber={expectedLevelNumber} -> levelId={levelId}");
             }
             else
             {
-                Debug.Log($"[LevelProgress] ❌ No match by levelNumber: buildIndex={scene.buildIndex} -> expectedLevelNumber={expectedLevelNumber} (not in dictionary)");
             }
-        }
-        
-        if (string.IsNullOrEmpty(levelId))
-        {
-            Debug.LogError($"[LevelProgress] ❌ Failed to resolve levelId for scene: '{scene.name}' (buildIndex: {scene.buildIndex})");
-            Debug.LogError($"[LevelProgress] Available sceneNames: {string.Join(", ", sceneNameToLevelId.Keys)}");
-            Debug.LogError($"[LevelProgress] Available levelNumbers: {string.Join(", ", levelNumberToLevelId.Keys)}");
         }
 
         onResolved?.Invoke(levelId);
@@ -159,11 +129,8 @@ public class LevelProgressManager : MonoBehaviour
 
     public IEnumerator CompleteLevel(string userId, string levelId, int score, int coins, int enemies, int durationSeconds)
     {
-        Debug.Log($"[LevelProgress] CompleteLevel called - userId={userId}, levelId={levelId}, score={score}, coins={coins}, enemies={enemies}, time={durationSeconds}s");
-        
         if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(levelId))
         {
-            Debug.LogWarning($"[LevelProgress] ❌ Cannot complete level - userId={userId}, levelId={levelId}");
             yield break;
         }
 
@@ -176,18 +143,14 @@ public class LevelProgressManager : MonoBehaviour
         };
 
         var json = JsonUtility.ToJson(payload);
-        Debug.Log($"[LevelProgress] Sending complete level request: {json}");
-        
         APIResponse<string> apiResult = null;
         yield return APIClient.Post(APIConfig.CompleteLevel(userId, levelId), json, r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
 
         if (apiResult != null && apiResult.success)
         {
-            Debug.Log($"[LevelProgress] ✅ CompleteLevel success for levelId={levelId}, score={score}, coins={coins}, enemies={enemies}");
         }
         else
         {
-            Debug.LogWarning($"[LevelProgress] ❌ CompleteLevel failed - status={(int?)apiResult?.statusCode}, error={apiResult?.error}, data={apiResult?.data}");
         }
     }
 
@@ -203,7 +166,6 @@ public class LevelProgressManager : MonoBehaviour
 
         if (isFetchingLevels)
         {
-            Debug.LogWarning("[LevelProgress] Timeout waiting for levels fetch to complete");
             yield break;
         }
 
@@ -211,13 +173,10 @@ public class LevelProgressManager : MonoBehaviour
         if (Time.realtimeSinceStartup - lastLevelsFetchTime < levelsCacheTtlSeconds &&
             sceneNameToLevelId.Count > 0 && levelNumberToLevelId.Count > 0)
         {
-            Debug.Log($"[LevelProgress] Using cached levels (cached {sceneNameToLevelId.Count} levels)");
             yield break;
         }
 
         isFetchingLevels = true;
-        Debug.Log("[LevelProgress] Fetching levels from server...");
-        
         APIResponse<string> apiResult = null;
         yield return APIClient.Get(APIConfig.Levels, r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
         isFetchingLevels = false;
@@ -246,35 +205,27 @@ public class LevelProgressManager : MonoBehaviour
                         if (!string.IsNullOrEmpty(lvl.sceneName))
                         {
                             sceneNameToLevelId[lvl.sceneName] = lvl._id;
-                            Debug.Log($"[LevelProgress] Mapped sceneName '{lvl.sceneName}' -> levelId={lvl._id} (levelNumber={lvl.levelNumber}, isUnlocked={lvl.isUnlocked})");
                         }
                         // Fallback to levelName if sceneName is not available
                         else if (!string.IsNullOrEmpty(lvl.levelName))
                         {
                             sceneNameToLevelId[lvl.levelName] = lvl._id;
-                            Debug.Log($"[LevelProgress] Mapped levelName '{lvl.levelName}' -> levelId={lvl._id} (levelNumber={lvl.levelNumber}, isUnlocked={lvl.isUnlocked})");
                         }
                     }
                     lastLevelsFetchTime = Time.realtimeSinceStartup;
-                    Debug.Log($"[LevelProgress] ✅ Cached {parsed.levels.Length} levels successfully");
                 }
                 else
                 {
-                    Debug.LogWarning($"[LevelProgress] Levels response is empty or invalid - levels={parsed?.levels?.Length ?? 0}");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Debug.LogError($"[LevelProgress] Failed to parse levels response: {ex.Message}");
-                Debug.LogError($"[LevelProgress] Response body: {apiResult.data}");
             }
         }
         else
         {
-            Debug.LogError($"[LevelProgress] ❌ Fetch levels failed - status={(int?)apiResult?.statusCode}, err={apiResult?.error}");
             if (apiResult != null && !string.IsNullOrEmpty(apiResult.data))
             {
-                Debug.LogError($"[LevelProgress] Response data: {apiResult.data}");
             }
         }
     }
@@ -375,7 +326,6 @@ public class LevelProgressManager : MonoBehaviour
     {
         if (!HasAuth())
         {
-            Debug.LogWarning("[LevelProgress] Cannot get highest completed level - not authenticated");
             onResult?.Invoke(0);
             yield break;
         }
@@ -399,18 +349,15 @@ public class LevelProgressManager : MonoBehaviour
                             highestLevelNumber = Mathf.Max(highestLevelNumber, progress.levelId.levelNumber);
                         }
                     }
-                    Debug.Log($"[LevelProgress] Highest completed level: {highestLevelNumber}");
                     onResult?.Invoke(highestLevelNumber);
                     yield break;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Debug.LogError($"[LevelProgress] Failed to parse level progress response: {ex.Message}");
             }
         }
-
-        Debug.Log("[LevelProgress] No completed levels found or error occurred");
+        
         onResult?.Invoke(0);
     }
 
@@ -420,11 +367,8 @@ public class LevelProgressManager : MonoBehaviour
     /// </summary>
     public IEnumerator GetNextLevelToPlay(Action<LevelData> onResult)
     {
-        Debug.Log("[LevelProgress] GetNextLevelToPlay: Starting...");
-        
         if (!HasAuth())
         {
-            Debug.LogWarning("[LevelProgress] GetNextLevelToPlay: Not authenticated");
             onResult?.Invoke(null);
             yield break;
         }
@@ -453,15 +397,13 @@ public class LevelProgressManager : MonoBehaviour
                             completedLevelNumbers.Add(progress.levelId.levelNumber);
                         }
                     }
-                    Debug.Log($"[LevelProgress] GetNextLevelToPlay: Found {completedLevelNumbers.Count} completed levels: {string.Join(", ", completedLevelNumbers)}");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Debug.LogError($"[LevelProgress] GetNextLevelToPlay: Failed to parse level progress: {ex.Message}");
             }
         }
-
+        
         // Find first uncompleted level, starting from Level 1
         LevelData nextLevelData = null;
         int maxLevelNumber = 0;
@@ -472,8 +414,6 @@ public class LevelProgressManager : MonoBehaviour
             maxLevelNumber = Mathf.Max(maxLevelNumber, kvp.Key);
         }
         
-        Debug.Log($"[LevelProgress] GetNextLevelToPlay: Checking levels 1 to {maxLevelNumber} for first uncompleted level...");
-        
         for (int levelNum = 1; levelNum <= maxLevelNumber; levelNum++)
         {
             if (!completedLevelNumbers.Contains(levelNum))
@@ -481,7 +421,6 @@ public class LevelProgressManager : MonoBehaviour
                 nextLevelData = GetLevelDataByNumber(levelNum);
                 if (nextLevelData != null)
                 {
-                    Debug.Log($"[LevelProgress] ✅ GetNextLevelToPlay: Found first uncompleted level: {nextLevelData.levelName} (Level {nextLevelData.levelNumber})");
                     onResult?.Invoke(nextLevelData);
                     yield break;
                 }
@@ -491,7 +430,6 @@ public class LevelProgressManager : MonoBehaviour
         // If all levels are completed, return the last level (or Level 1 if no levels found)
         if (nextLevelData == null)
         {
-            Debug.Log("[LevelProgress] GetNextLevelToPlay: All levels completed, returning last level or Level 1");
             if (maxLevelNumber > 0)
             {
                 nextLevelData = GetLevelDataByNumber(maxLevelNumber);
@@ -504,12 +442,10 @@ public class LevelProgressManager : MonoBehaviour
 
         if (nextLevelData == null)
         {
-            Debug.LogError("[LevelProgress] GetNextLevelToPlay: No levels found! Returning null");
             onResult?.Invoke(null);
             yield break;
         }
 
-        Debug.Log($"[LevelProgress] ✅ GetNextLevelToPlay: Returning {nextLevelData.levelName} (Level {nextLevelData.levelNumber})");
         onResult?.Invoke(nextLevelData);
     }
 
@@ -525,32 +461,25 @@ public class LevelProgressManager : MonoBehaviour
     {
         if (!HasAuth() || string.IsNullOrEmpty(levelId))
         {
-            Debug.LogWarning($"[LevelProgress] UpdateCurrentLevel: Cannot update - HasAuth={HasAuth()}, levelId={levelId}");
             onResult?.Invoke(false);
             yield break;
         }
 
         var userId = AuthManager.Instance.CurrentPlayer.userId;
-        Debug.Log($"[LevelProgress] UpdateCurrentLevel: Updating currentLevel to levelId={levelId} for userId={userId}");
-        
         var updateData = new UpdateCurrentLevelRequest { currentLevel = levelId };
         var json = JsonUtility.ToJson(updateData);
-        Debug.Log($"[LevelProgress] UpdateCurrentLevel: Request body: {json}");
 
         APIResponse<string> apiResult = null;
         yield return APIClient.Put(APIConfig.GameProfile(userId), json, r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
 
         if (apiResult != null && apiResult.success)
         {
-            Debug.Log($"[LevelProgress] ✅ UpdateCurrentLevel: Successfully updated currentLevel to {levelId}");
             onResult?.Invoke(true);
         }
         else
         {
-            Debug.LogWarning($"[LevelProgress] ❌ UpdateCurrentLevel: Failed to update currentLevel - success={apiResult?.success}, statusCode={apiResult?.statusCode}, error={apiResult?.error}");
             if (apiResult != null && !string.IsNullOrEmpty(apiResult.data))
             {
-                Debug.LogWarning($"[LevelProgress] UpdateCurrentLevel: Response data: {apiResult.data}");
             }
             onResult?.Invoke(false);
         }
@@ -563,42 +492,33 @@ public class LevelProgressManager : MonoBehaviour
     {
         if (!HasAuth())
         {
-            Debug.Log("[LevelProgress] GetCurrentLevel: Not authenticated");
             onResult?.Invoke(null);
             yield break;
         }
 
         var userId = AuthManager.Instance.CurrentPlayer.userId;
-        Debug.Log($"[LevelProgress] GetCurrentLevel: Fetching game profile for userId={userId}");
-        
         APIResponse<string> apiResult = null;
         yield return APIClient.Get(APIConfig.GameProfile(userId), r => apiResult = r, AuthManager.Instance?.BuildAuthHeaders());
 
         if (apiResult != null && apiResult.success && !string.IsNullOrEmpty(apiResult.data))
         {
-            Debug.Log($"[LevelProgress] GetCurrentLevel: API response received. Data length: {apiResult.data.Length}");
-            Debug.Log($"[LevelProgress] GetCurrentLevel: Raw response: {apiResult.data}");
-            
             // Ensure levels are cached before parsing (moved outside try-catch to avoid CS1626)
             yield return EnsureLevelsCached();
             
             try
             {
                 var profile = JsonUtility.FromJson<GameProfileResponse>(apiResult.data);
-                Debug.Log($"[LevelProgress] GetCurrentLevel: Parsed profile - profile={profile != null}, gameProfile={profile?.gameProfile != null}, currentLevel={profile?.gameProfile?.currentLevel != null}");
                 
                 if (profile != null && profile.gameProfile != null)
                 {
                     // Check if currentLevel exists and is not an empty object
                     // Unity JsonUtility may create empty objects with default values when field is null in JSON
-                    bool hasValidCurrentLevel = profile.gameProfile.currentLevel != null &&
+                        bool hasValidCurrentLevel = profile.gameProfile.currentLevel != null &&
                         (!string.IsNullOrEmpty(profile.gameProfile.currentLevel._id) || 
                          profile.gameProfile.currentLevel.levelNumber > 0);
                     
                     if (hasValidCurrentLevel)
                     {
-                        Debug.Log($"[LevelProgress] GetCurrentLevel: currentLevel._id='{profile.gameProfile.currentLevel._id}', levelNumber={profile.gameProfile.currentLevel.levelNumber}, levelName='{profile.gameProfile.currentLevel.levelName}'");
-                        
                         LevelData levelData = null;
                         
                         // Try to get level data by _id first
@@ -607,7 +527,6 @@ public class LevelProgressManager : MonoBehaviour
                             levelData = GetLevelData(profile.gameProfile.currentLevel._id);
                             if (levelData != null)
                             {
-                                Debug.Log($"[LevelProgress] ✅ GetCurrentLevel: Found currentLevel by _id: {levelData.levelName} (Level {levelData.levelNumber})");
                                 onResult?.Invoke(levelData);
                                 yield break;
                             }
@@ -619,40 +538,32 @@ public class LevelProgressManager : MonoBehaviour
                             levelData = GetLevelDataByNumber(profile.gameProfile.currentLevel.levelNumber);
                             if (levelData != null)
                             {
-                                Debug.Log($"[LevelProgress] ✅ GetCurrentLevel: Found currentLevel by levelNumber: {levelData.levelName} (Level {levelData.levelNumber})");
                                 onResult?.Invoke(levelData);
                                 yield break;
                             }
                         }
                         
-                        // If still not found, log warning and treat as null
+                        // If still not found, treat as null
                         if (levelData == null)
                         {
-                            Debug.LogWarning($"[LevelProgress] GetCurrentLevel: Level data not found in cache - _id='{profile.gameProfile.currentLevel._id}', levelNumber={profile.gameProfile.currentLevel.levelNumber}. Treating as null.");
                         }
                     }
                     else
                     {
-                        Debug.Log("[LevelProgress] GetCurrentLevel: currentLevel is null or empty in GameProfile (no valid _id or levelNumber)");
                     }
                 }
                 else
                 {
-                    Debug.LogWarning($"[LevelProgress] GetCurrentLevel: Failed to parse profile structure - profile={profile != null}, gameProfile={profile?.gameProfile != null}");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Debug.LogError($"[LevelProgress] GetCurrentLevel: Failed to parse game profile: {ex.Message}");
-                Debug.LogError($"[LevelProgress] GetCurrentLevel: Stack trace: {ex.StackTrace}");
             }
         }
         else
         {
-            Debug.LogWarning($"[LevelProgress] GetCurrentLevel: API call failed - success={apiResult?.success}, hasData={!string.IsNullOrEmpty(apiResult?.data)}, statusCode={apiResult?.statusCode}, error={apiResult?.error}");
         }
-
-        Debug.Log("[LevelProgress] GetCurrentLevel: No currentLevel set in GameProfile, returning null");
+        
         onResult?.Invoke(null);
     }
 

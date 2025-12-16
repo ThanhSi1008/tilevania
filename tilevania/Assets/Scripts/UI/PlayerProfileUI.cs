@@ -37,7 +37,6 @@ public class PlayerProfileUI : MonoBehaviour
     {
         if (isLoading)
         {
-            Debug.Log("[PlayerProfile] Already loading, skipping...");
             return;
         }
 
@@ -99,19 +98,16 @@ public class PlayerProfileUI : MonoBehaviour
                 }
                 else
                 {
-                    Debug.LogWarning("[PlayerProfile] Failed to parse game profile response");
                     onComplete?.Invoke(null);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Debug.LogWarning($"[PlayerProfile] ❌ Failed to parse game profile: {ex.Message} body={apiResult.data}");
                 onComplete?.Invoke(null);
             }
         }
         else
         {
-            Debug.LogWarning($"[PlayerProfile] ❌ Fetch game profile failed - status={(int?)apiResult?.statusCode}, error={apiResult?.error}");
             onComplete?.Invoke(null);
         }
     }
@@ -135,9 +131,8 @@ public class PlayerProfileUI : MonoBehaviour
 
                 onComplete?.Invoke(achievements);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Debug.LogWarning($"[PlayerProfile] ❌ Failed to parse achievements: {ex.Message}");
                 onComplete?.Invoke(new List<AchievementManager.PlayerAchievementData>());
             }
         }

@@ -7,8 +7,12 @@ public class BackToMainMenu : MonoBehaviour
 
     public void GoToMainMenu()
     {
-        Debug.Log("[BackToMainMenu] Loading AuthScene (Main Menu)");
+        Debug.Log("Returning to Main Menu...");
+
+        ScenePersist.ResetAll();
         SessionManager.Instance?.ClearSession();
+
         SceneManager.LoadScene(AUTH_SCENE);
     }
+
 }
