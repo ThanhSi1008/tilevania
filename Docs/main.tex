@@ -1,0 +1,340 @@
+\input{lib}
+
+\begin{document}
+
+%------------------------------------------------------
+% Title page (metadata will be updated later)
+%------------------------------------------------------
+\begin{titlepage}
+\begin{center}
+{\Large \bf TRƯỜNG ĐẠI HỌC CÔNG NGHIỆP TP.HCM}\\
+{\large Khoa Công Nghệ Thông Tin}\\[1cm]
+{\Large \bf BÁO CÁO DỰ ÁN}\\[0.5cm]
+{\Large \bf Unity Game + Server MongoDB Atlas}\\[1cm]
+
+\vspace{0.5cm}
+\begin{tabular}{ll}
+Lớp  & DHKTPM18B\\
+Nhóm & (cập nhật)\\
+GVHD & (cập nhật)\\
+\end{tabular}
+\vfill
+TP. Hồ Chí Minh, Tháng 12 Năm 2025
+\end{center}
+\end{titlepage}
+
+%------------------------------------------------------
+% Table of contents
+%------------------------------------------------------
+\renewcommand\contentsname{\centering\LARGE Nội dung}
+\tableofcontents
+\newpage
+
+%------------------------------------------------------
+% Abstract / Tóm tắt
+%------------------------------------------------------
+\section*{Tóm tắt}
+Game platformer 2D phát triển bằng Unity, kết nối backend REST, lưu trữ trên MongoDB Atlas. Báo cáo mô tả kiến trúc client–server, gameplay, đồng bộ dữ liệu người chơi, thiết kế dữ liệu, API, UI/UX, kiểm thử, vận hành và kế hoạch triển khai.
+\addcontentsline{toc}{section}{Tóm tắt}
+
+%------------------------------------------------------
+% Giới thiệu
+%------------------------------------------------------
+\section{Giới thiệu}
+\subsection{Bối cảnh và mục tiêu}
+Trò chơi hành động đi cảnh 2D (platformer) với nhân vật chính vượt chướng ngại, bắn kẻ địch, thu thập xu và hoàn thành màn. Hệ thống có đăng nhập/đăng ký, lưu tiến trình và thống kê trên đám mây (MongoDB Atlas), hỗ trợ âm thanh SFX/BGM và thiết lập âm lượng. Mục tiêu:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Trải nghiệm mượt và an toàn dữ liệu}: điều khiển, âm thanh đầy đủ; dữ liệu được lưu cloud, chịu lỗi mạng ở mức hợp lý.
+    \item \textbf{Đồng bộ đa thiết bị}: tiến trình và hồ sơ người chơi lưu trên server; client chỉ cache ngắn hạn.
+    \item \textbf{Dễ mở rộng}: API rõ, mô hình dữ liệu tách bạch (User, GameProfile, GameSession, Level, LevelProgress), dễ bổ sung leaderboard/achievement.
+    \item \textbf{Vận hành được}: có log, chỉ mục, backup Atlas, CI/CD cơ bản.
+\end{itemize}
+\subsection{Phạm vi và đối tượng}
+Phạm vi:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Client Unity}: gameplay platformer 2D, HUD, âm thanh, đăng nhập/đăng ký, cài đặt âm thanh.
+    \item \textbf{Server REST (Node/Express)}: JWT auth, CRUD hồ sơ/phiên/level/tiến trình, swagger docs, Jest test.
+    \item \textbf{Dữ liệu}: MongoDB Atlas với các bộ sưu tập users, gameProfiles, gameSessions, levels, levelProgress; tuỳ chọn leaderboard/achievements.
+\end{itemize}
+Đối tượng: người chơi (end-user), QA (kiểm thử), dev (client/server), vận hành (DevOps/DBA).
+\subsection{Tài liệu tham khảo liên quan}
+Thiết kế hệ thống nội bộ, đặc tả API (swagger), tài liệu MongoDB Atlas (kết nối, index, backup), hướng dẫn triển khai CI/CD và Jest test.
+
+%------------------------------------------------------
+% Kiến trúc tổng thể
+%------------------------------------------------------
+\section{Kiến trúc hệ thống}
+\subsection{Tổng quan}
+Kiến trúc client–server tách biệt:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Client Unity}: xử lý gameplay, input, render, âm thanh; gọi API HTTP(S) để đăng nhập, start/end session, đồng bộ điểm/mạng/level.
+    \item \textbf{API server (Express)}: định tuyến REST, xác thực JWT, validate (Joi), controller cho auth, profile, session, level, levelProgress.
+    \item \textbf{Cơ sở dữ liệu}: MongoDB Atlas; model Mongoose; chỉ mục; backup và bảo mật qua Atlas.
+    \item \textbf{Bảo mật}: JWT, authorizeUser để tránh truy cập chéo userId; CORS; biến môi trường cho secret/URI.
+\end{itemize}
+\subsection{Client (Unity)}
+- Input: di chuyển, nhảy, bắn, leo thang, dash.\\
+- Gameplay manager: \texttt{GameSession} quản lý mạng, lives, score, levelId, đồng bộ định kỳ; \texttt{LevelExit} điều phối chuyển màn.\\
+- UI: AuthScene (Login/Register/MainMenu), HUD (Lives, Score, Level), Settings (âm thanh).\\
+- Âm thanh: \texttt{AudioManager} singleton, SFX (jump, shoot, coin, death, game over, level exit, click), BGM; thiết lập âm lượng (MusicVolume, SFXVolume, IsMuted) lưu PlayerPrefs; tự pause BGM khi volume = 0.\\
+- Khôi phục HUD: khi text bị xoá (ResetAll), \texttt{GameSession} tìm lại (Ensure\*TextReference) sau khi scene load.
+\subsection{Server / API}
+- Auth: \texttt{/api/auth/register}, \texttt{/api/auth/login}; JWT; cập nhật \texttt{lastLoginAt}.\\
+- GameProfile: GET/PUT profile; add score/coins; increment death; update lives; add playtime.\\
+- Sessions: start (\texttt{POST /api/sessions}), update (\texttt{PUT /:sessionId}), end (\texttt{POST /:sessionId/end}), history.\\
+- LevelProgress: get/update/complete per level; lưu bestScore, bestTime, playCount.\\
+- Levels: danh sách/chi tiết level (levelNumber, sceneName, requiredScoreToUnlock).\\
+- Middleware: \texttt{authenticateToken}, \texttt{authorizeUser}; validate bằng Joi (utils/validators).
+\subsection{Cơ sở dữ liệu (MongoDB Atlas)}
+Atlas cluster; Mongoose schema:
+\begin{itemize}[leftmargin=1.5em]
+    \item User: email/username unique, password hash (Bcrypt), isActive, lastLoginAt, timestamps.
+    \item GameProfile: thống kê tổng; currentLives, currentLevel (ref Level).
+    \item GameSession: theo level; sessionStatus (ACTIVE/COMPLETED/ABANDONED/FAILED), isCompleted.
+    \item Level: levelNumber unique, sceneName, difficulty, maxCoins, maxEnemies, requiredScoreToUnlock.
+    \item LevelProgress: userId + levelId unique; bestScore, bestTime, playCount, completedAt.
+\end{itemize}
+Chỉ mục chính: users(email, username), gameProfiles(userId), gameSessions(userId, levelId, sessionStatus), levels(levelNumber), levelProgress(userId, levelId).
+\subsection{Triển khai và cấu hình}
+\begin{itemize}[leftmargin=1.5em]
+    \item Atlas: SRV URI, user theo role, IP whitelist; backup snapshot/PITR; theo dõi index health.
+    \item Server: env \texttt{MONGODB\_URI}, \texttt{DB\_NAME}, \texttt{JWT\_SECRET}, \texttt{PORT}; CORS; nodemon cho dev; Jest test; swagger doc.
+    \item Client: cấu hình base URL API, timeout, retry ngắn khi start/end session; fallback nếu API null; pause BGM khi volume 0.
+    \item Graceful shutdown: lắng nghe SIGTERM/SIGINT, đóng server sạch.
+\end{itemize}
+
+%------------------------------------------------------
+% Thiết kế gameplay và nội dung
+%------------------------------------------------------
+\section{Thiết kế gameplay}
+\subsection{Cốt lõi gameplay}
+Gameplay là một platformer 2D dạng side–scrolling:
+\begin{itemize}[leftmargin=1.5em]
+    \item Người chơi điều khiển nhân vật chính di chuyển qua các platform, né chướng ngại, nhảy qua hố, leo thang, dash và bắn kẻ địch.
+    \item Mỗi màn (Level) có số lượng coin và kẻ địch nhất định; người chơi thu thập coin để tăng điểm, bắn/né kẻ địch để tiến tới cổng thoát (LevelExit).
+    \item Nhân vật có số mạng (lives) giới hạn; va chạm với kẻ địch hoặc bẫy (layer \texttt{Enemies}, \texttt{Hazards}) sẽ chết, trừ mạng hoặc game over.
+    \item Hệ thống GameSession ghi nhận số coin, kẻ địch đã hạ, số lần chết, điểm và thời gian chơi cho mỗi level.
+\end{itemize}
+\subsection{Level và tiến trình}
+Mỗi level là một scene riêng trong Unity, được ánh xạ với một bản ghi \texttt{Level} trong server:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Cấu trúc Level}: platform, cầu thang (layer \texttt{Climbing}), bẫy (layer \texttt{Hazards}), kẻ địch (\texttt{EnemyMovement}), coin (\texttt{CoinPickup}), cổng thoát (\texttt{LevelExit}).
+    \item \textbf{Kẻ địch}: di chuyển qua lại với tốc độ cố định, đảo chiều khi ra khỏi trigger (OnTriggerExit2D), lật sprite theo hướng di chuyển.
+    \item \textbf{Coin}: khi nhân vật đi qua, CoinPickup cộng điểm (\texttt{pointsForCoinPickup}), tăng bộ đếm coin trong GameSession, phát âm thanh rồi phá huỷ coin.
+    \item \textbf{Thoát màn}: khi nhân vật chạm cổng \texttt{LevelExit} và không trong trạng thái loading, LevelExit kích hoạt coroutine \texttt{LoadNextLevel}, set cờ \texttt{IsLoading}, gửi EndSession(status = COMPLETED) và chuyển sang scene tiếp theo (hoặc về main menu tuỳ logic unlock).
+    \item \textbf{Tiến trình}: server dùng LevelProgress để ghi lại bestScore, bestTime, playCount và isCompleted cho từng level của từng user; GameProfile cập nhật currentLevel và tổng thống kê.
+\end{itemize}
+\subsection{Điều khiển và tương tác}
+Điều khiển dùng Input System mới của Unity (InputValue trong \texttt{PlayerMovement}):
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{OnMove}: nhận vector 2D từ phím/analog, nhân với \texttt{moveSpeed} để tạo velocity theo trục X; animator set \texttt{isRunning} khi vận tốc ngang khác 0.
+    \item \textbf{OnJump}: chỉ cho phép khi collider chân (\texttt{myFeetCollider}) chạm layer \texttt{Ground}; cộng thêm vector vận tốc theo trục Y (\texttt{jumpSpeed}); phát SFX nhảy.
+    \item \textbf{ClimbLadder}: nếu collider chân chạm layer \texttt{Climbing}, tắt gravity và cho phép di chuyển theo trục Y với \texttt{climbSpeed}, đồng thời bật animation leo.
+    \item \textbf{OnDash}: kiểm tra cooldown, trạng thái đang dash; khi kích hoạt, coroutine \texttt{Dash} đặt gravity = 0, đẩy nhân vật theo hướng đang quay (\texttt{dashSpeed}) trong một khoảng thời gian ngắn, sau đó khôi phục gravity.
+    \item \textbf{OnAttack}: bắn đạn bằng cách \texttt{Instantiate} prefab Bullet tại vị trí súng (gun), hướng theo chiều nhân vật quay; phát SFX bắn.
+    \item \textbf{Bullet}: xác định tốc độ theo hướng nhân vật tại thời điểm bắn, di chuyển thẳng; khi va chạm Enemy, cộng bộ đếm enemiesDefeated trong GameSession rồi phá huỷ Enemy và Bullet.
+    \item \textbf{Chết}: nếu collider thân chạm layer \texttt{Enemies} hoặc \texttt{Hazards}, set \texttt{isAlive = false}, trigger animation \texttt{Dying}, đẩy nhân vật bằng \texttt{deathKick}, sau đó gọi \texttt{GameSession.ProcessPlayerDeath()} (retry nhiều frame nếu chưa tìm thấy GameSession).
+    \item \textbf{HUD}: hiển thị mạng (Lives Text), điểm (Score Text), tên level (Level Text); GameSession là singleton \texttt{DontDestroyOnLoad}, mỗi lần scene gameplay load sẽ tìm lại các text này theo name nếu bị destroy.
+\end{itemize}
+\subsection{Âm thanh và nhạc nền}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{SFX}: 
+    \begin{itemize}
+        \item Jump: gọi \texttt{AudioManager.PlayJump()} trong \texttt{OnJump}.
+        \item Shoot: \texttt{PlayShoot()} trong \texttt{OnAttack}.
+        \item Coin: \texttt{PlayCoinPickup()} trong \texttt{CoinPickup}.
+        \item Level exit: \texttt{PlayLevelExit()} khi player chạm \texttt{LevelExit}.
+        \item Death: \texttt{PlayDeath()} trong \texttt{ProcessPlayerDeath()}.
+        \item Game over: \texttt{PlayGameOver()} khi hiện GameOver modal.
+        \item Button click: \texttt{PlayButtonClick()} qua \texttt{UIButtonClickSound} và \texttt{SoundSettingsButton}.
+    \end{itemize}
+    \item \textbf{Nhạc nền (BGM)}:
+    \begin{itemize}
+        \item \texttt{AudioManager} có \texttt{musicSource} loop, \texttt{backgroundMusicClip}; \texttt{PlayBackgroundMusic()} được gọi sau khi login/register thành công.
+        \item \textit{MusicVolume} là volume chính (thay thế master), SFX volume là nhân thêm cho SFX; khi MusicVolume = 0, nhạc bị pause (và unpause khi > 0).
+        \item Slider trong SoundSettingsPanel chỉnh MusicVolume và SFXVolume theo thời gian thực, lưu PlayerPrefs; toggle mute set \texttt{IsMuted}.
+    \end{itemize}
+\end{itemize}
+
+%------------------------------------------------------
+% Mạng và đồng bộ dữ liệu
+%------------------------------------------------------
+\section{Mạng và đồng bộ}
+\subsection{Luồng đăng nhập / đăng ký}
+Luồng AuthScene:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Đăng ký} \texttt{POST /api/auth/register}: gửi \{username, email, password\}; nhận JWT + user; lưu token, chuyển MainMenu.
+    \item \textbf{Đăng nhập} \texttt{POST /api/auth/login}: gửi \{email, password\}; nhận JWT + user; cập nhật \texttt{lastLoginAt}; lưu token.
+    \item Sau đăng nhập/đăng ký: bật nhạc nền (AudioManager.PlayBackgroundMusic), load profile hiện tại, hiển thị MainMenu.
+\end{itemize}
+\subsection{Đồng bộ hồ sơ người chơi}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{GET /api/gameProfile/:userId}: tải lives, totalScore, currentLevel,... để thiết lập HUD và logic game.
+    \item \textbf{Update currentLevel}: khi StartSession, GameSession gọi server cập nhật currentLevel (qua LevelProgressManager/Level) trước khi chơi.
+    \item \textbf{Sync định kỳ}: GameSession có timer SYNC\_INTERVAL để gửi stats (score, coins, enemies, deaths, lives) lên server.
+\end{itemize}
+\subsection{Lưu trữ tiến trình (cloud save)}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Start session} \texttt{POST /api/sessions}: tạo phiên với userId, levelId; server trả sessionId; client cache để update.
+    \item \textbf{Update session} \texttt{PUT /api/sessions/:sessionId}: gửi delta (score, coins, enemiesDefeated, deathCount, livesRemaining).
+    \item \textbf{End session} \texttt{POST /api/sessions/:sessionId/end}: chốt trạng thái (COMPLETED/FAILED/ABANDONED), duration.
+    \item \textbf{Complete level} \texttt{POST /api/levelProgress/:userId/:levelId/complete}: đánh dấu hoàn thành, cập nhật bestScore/bestTime/playCount/isCompleted; đồng bộ GameProfile (totalScore,...).
+\end{itemize}
+\subsection{Xử lý lỗi và retry}
+\begin{itemize}[leftmargin=1.5em]
+    \item Client kiểm tra null API: nếu thiếu LevelProgressManager/AchievementManager, log warning và bỏ qua.
+    \item Một số thao tác quan trọng (tìm GameSession khi chết, cập nhật level text) có cơ chế retry vài frame.
+    \item Khi network lỗi nặng: fallback reload scene hiện tại; EndSession có thể bỏ qua nếu không có sessionId.
+    \item BGM/SFX không phụ thuộc mạng; HUD được khôi phục local nếu UI bị destroy.
+\end{itemize}
+
+%------------------------------------------------------
+% Thiết kế dữ liệu
+%------------------------------------------------------
+\section{Thiết kế dữ liệu (MongoDB)}
+\subsection{Lược đồ chính}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{users}: lưu thông tin tài khoản – \_id, username (duy nhất, 3–20 ký tự), email (duy nhất, regex kiểm tra định dạng), passwordHash (được hash bằng Bcrypt, không trả về mặc định), profileImage, isActive, lastLoginAt, timestamps. Chỉ mục trên \texttt{email}, \texttt{username}.
+    \item \textbf{gameProfiles}: thống kê tổng cho mỗi người chơi – userId (uniqe, ref User), totalScore, totalCoinsCollected, totalEnemiesDefeated, totalDeaths, totalPlayTime (giây), currentLives, highestScoreAchieved, lastSessionScore, currentLevel (ref Level), timestamps. Chỉ mục trên \texttt{userId}.
+    \item \textbf{gameSessions}: log phiên chơi từng level – userId, levelId (ref Level), startTime, endTime, duration, finalScore, coinsCollected, enemiesDefeated, deathCount, livesRemaining, sessionStatus (ACTIVE/COMPLETED/ABANDONED/FAILED), isCompleted, timestamps. Chỉ mục trên \texttt{userId}, \texttt{levelId}, \texttt{sessionStatus}.
+    \item \textbf{levels}: định nghĩa level – levelNumber (duy nhất, \(\ge 1\)), levelName, description, difficulty (EASY/NORMAL/HARD), maxCoins, maxEnemies, sceneName (tên scene Unity), isUnlocked, requiredScoreToUnlock, timestamps. Chỉ mục trên \texttt{levelNumber}.
+    \item \textbf{levelProgress}: tiến trình theo từng level – userId, levelId, isCompleted, coinsCollected, enemiesDefeated, deathCount, bestScore, bestTime, playCount, lastPlayedAt, completedAt, timestamps. Chỉ mục kết hợp \texttt{userId, levelId} (duy nhất), cùng các chỉ mục đơn trên userId/levelId.
+    \item (Tuỳ chọn) \textbf{leaderboards}, \textbf{achievements}, \textbf{playerAchievements} theo mô hình đã có trong code server để phục vụ xếp hạng và thành tích.
+\end{itemize}
+\subsection{Ràng buộc và chỉ mục}
+Các ràng buộc chính:
+\begin{itemize}[leftmargin=1.5em]
+    \item Unique trên \texttt{users.email}, \texttt{users.username}, \texttt{gameProfiles.userId}, \texttt{levelProgress(userId, levelId)}.
+    \item Giá trị số không âm (min: 0) cho điểm, coin, kẻ địch, số lần chết, thời gian.
+    \item Khoá ngoại logic qua \texttt{ref} tới \texttt{User} và \texttt{Level} (được kiểm tra ở tầng API).
+\end{itemize}
+\subsection{Backup / restore}
+Dùng backup Atlas (snapshot), cấu hình PITR nếu cần; kiểm tra khôi phục định kỳ.
+
+%------------------------------------------------------
+% API chính
+%------------------------------------------------------
+\section{API chính}
+\subsection{Xác thực / phân quyền}
+Nhóm API \texttt{/api/auth}:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{POST /api/auth/register}: đăng ký tài khoản mới (username, email, password); trả về JWT + thông tin user.
+    \item \textbf{POST /api/auth/login}: đăng nhập bằng email/password; trả về JWT + thông tin user; cập nhật \texttt{lastLoginAt}.
+\end{itemize}
+Middleware \texttt{authenticateToken} kiểm tra JWT ở header; \texttt{authorizeUser} đảm bảo user chỉ truy cập tài nguyên của chính mình (so sánh \texttt{:userId} với payload token).
+\subsection{Quản lý người chơi}
+Nhóm API \texttt{/api/gameProfile}:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{GET /api/gameProfile/:userId}: lấy GameProfile (tổng điểm, coin, kẻ địch, deaths, currentLives, currentLevel, v.v.).
+    \item \textbf{PUT /api/gameProfile/:userId}: cập nhật profile (cho phép server-side hợp nhất dữ liệu).
+    \item \textbf{POST /api/gameProfile/:userId/score}: cộng dồn điểm.
+    \item \textbf{POST /api/gameProfile/:userId/coins}: cộng dồn coin.
+    \item \textbf{POST /api/gameProfile/:userId/death}: tăng số lần chết.
+    \item \textbf{PUT /api/gameProfile/:userId/lives}: cập nhật số mạng hiện tại (currentLives).
+    \item \textbf{POST /api/gameProfile/:userId/playtime}: cộng dồn thời gian chơi.
+\end{itemize}
+\subsection{Tiến trình / thành tích}
+Nhóm API \texttt{/api/sessions}:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{POST /api/sessions}: startSession – tạo GameSession mới cho userId + levelId.
+    \item \textbf{PUT /api/sessions/:sessionId}: updateSession – cập nhật điểm, coin, enemies, deaths, livesRemaining trong khi chơi.
+    \item \textbf{POST /api/sessions/:sessionId/end}: endSession – chốt kết quả, set \texttt{sessionStatus} và duration.
+    \item \textbf{GET /api/sessions/:userId/history}: trả về lịch sử session của một người chơi.
+\end{itemize}
+Nhóm API \texttt{/api/levelProgress}:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{GET /api/levelProgress/:userId}: lấy toàn bộ tiến trình level của user.
+    \item \textbf{GET /api/levelProgress/:userId/:levelId}: lấy tiến trình cụ thể một level.
+    \item \textbf{PUT /api/levelProgress/:userId/:levelId}: cập nhật thống kê level (coins, enemies, deaths, bestScore, bestTime, playCount).
+    \item \textbf{POST /api/levelProgress/:userId/:levelId/complete}: đánh dấu level hoàn thành, cập nhật isCompleted và completedAt.
+\end{itemize}
+Nhóm API \texttt{/api/levels}:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{GET /api/levels}: trả danh sách level (phục vụ client mapping sceneName ↔ levelId).
+    \item \textbf{GET /api/levels/:levelId}: chi tiết một level (tên, số level, độ khó, điểm yêu cầu để mở khoá).
+\end{itemize}
+Các nhóm \texttt{/api/leaderboard}, \texttt{/api/achievements} (nếu dùng) phục vụ xếp hạng và thành tích.
+\subsection{Giám sát và logging}
+Log lỗi API; metric tần suất start/end session, tỉ lệ lỗi; lưu client warnings nếu cần.
+
+%------------------------------------------------------
+% UI/UX
+%------------------------------------------------------
+\section{Giao diện người dùng}
+\subsection{Luồng màn hình}
+AuthScene: \textbf{Login} / \textbf{Register} → \textbf{Main Menu} → \textbf{Play} → \textbf{Level scene}; \textbf{Settings} (âm thanh) là một modal phủ lên (ẩn các panel khác khi mở).
+\subsection{Màn hình đăng nhập / đăng ký}
+\begin{itemize}[leftmargin=1.5em]
+    \item Login: form email/password; nút Login gọi API; statusText hiển thị lỗi; loadingOverlay khóa thao tác trong lúc chờ.
+    \item Register: form username/email/password; nút Register; sau khi đăng ký thành công vẫn ở trạng thái login (theo flow hiện tại), có thể điều hướng về Login; statusText/overlay tương tự.
+    \item Chuyển đổi panel: nút “Go Register” và “Back to Login” ẩn/hiện các panel tương ứng.
+\end{itemize}
+\subsection{HUD trong game}
+\begin{itemize}[leftmargin=1.5em]
+    \item Hiển thị Lives, Score, Level (và Score Icon). Khi quay về main menu, các text này có thể bị destroy; GameSession (DontDestroyOnLoad) sẽ tìm lại theo name (“Lives Text”, “Score Text”, “Level Text”, “Score Icon”) sau khi scene gameplay load.
+    \item Cập nhật liên tục: livesText/scoreText được cập nhật mỗi lần thay đổi; levelText được cập nhật sau khi resolve levelId từ server.
+\end{itemize}
+\subsection{Cài đặt âm thanh}
+\begin{itemize}[leftmargin=1.5em]
+    \item Modal Settings: dùng SoundSettingsPanel; khi mở sẽ ẩn các panel khác (login/register/main menu), khi đóng sẽ khôi phục panel phù hợp (main menu nếu đã login, login nếu chưa).
+    \item Slider MusicVolume: điều chỉnh âm lượng chính (ảnh hưởng BGM và nhân với SFX); SFXVolume nhân thêm cho SFX; Mute toggle đặt âm lượng về 0 logic.
+    \item Lưu PlayerPrefs: MusicVolume, SFXVolume, IsMuted; áp dụng real-time; nếu MusicVolume = 0 thì BGM pause; >0 thì unpause.
+    \item Button click: tất cả button có thể gắn UIButtonClickSound; riêng Settings button dùng SoundSettingsButton để mở panel.
+\end{itemize}
+
+%------------------------------------------------------
+% Kiểm thử
+%------------------------------------------------------
+\section{Kiểm thử}
+\subsection{Kịch bản kiểm thử client}
+Di chuyển/nhảy/bắn/dash; thu coin; chết và game over; load level tiếp; âm thanh sự kiện; level text đúng.
+\subsection{Kiểm thử API}
+Login/Register; start/end session; update lives; complete level; lỗi mạng/timeout.
+\subsection{Kiểm thử tích hợp}
+Cloud save/restore tiến trình; currentLevel đồng bộ; HUD hiển thị đúng sau quay lại game.
+\subsection{Hiệu năng và tải}
+FPS ổn định; thời gian phản hồi API; độ trễ sync chấp nhận được.
+
+%------------------------------------------------------
+% Vận hành và triển khai
+%------------------------------------------------------
+\section{Vận hành / triển khai}
+\subsection{CI/CD}
+\begin{itemize}[leftmargin=1.5em]
+    \item Server: pipeline build/test (Jest), lint/validate; deploy Node/Express (commonjs). Có script seed (utils/seedDB) và leaderboard (utils/calculateLeaderboard).
+    \item Client: build Unity; (khuyến nghị) tự động hóa đóng gói build cho target platform; có thể cấu hình step gọi API healthcheck sau deploy.
+\end{itemize}
+\subsection{Cấu hình MongoDB Atlas}
+\begin{itemize}[leftmargin=1.5em]
+    \item Biến môi trường: \texttt{MONGODB\_URI} (SRV), \texttt{DB\_NAME}, user Atlas tối thiểu quyền; IP whitelist.
+    \item Atlas backup: snapshot/PITR; giám sát index, CPU/Memory, kết nối; dùng chỉ mục đã khai báo trong schema.
+    \item Quy hoạch dữ liệu: userId/levelId là ObjectId; levelNumber unique; levelProgress unique (userId, levelId).
+\end{itemize}
+\subsection{Giám sát và cảnh báo}
+\begin{itemize}[leftmargin=1.5em]
+    \item Log server: theo dõi lỗi 4xx/5xx, thời gian phản hồi các API nhạy cảm (auth, sessions).
+    \item Metric: tần suất start/end session, tỉ lệ lỗi đăng nhập/đăng ký, số request tới Atlas; alert khi spike lỗi hoặc kết nối Atlas thất bại.
+    \item Client fallback: nếu API trả null/exception, HUD vẫn hoạt động tối thiểu, có thể reload scene; âm thanh/điều khiển không phụ thuộc mạng.
+\end{itemize}
+
+%------------------------------------------------------
+% Kế hoạch và tiến độ
+%------------------------------------------------------
+\section{Kế hoạch / tiến độ}
+\subsection{Mốc công việc}
+Kiến trúc; gameplay; API; lưu trữ; kiểm thử; tối ưu; phát hành.
+\subsection{Phân công nhân sự}
+Client (Unity), Backend/API, DevOps/DB, QA.
+\subsection{Rủi ro và giảm thiểu}
+Mạng/timeout (retry, fallback); mất dữ liệu (backup Atlas); lệch phiên bản schema (kiểm tra version API).
+
+%------------------------------------------------------
+% Kết luận
+%------------------------------------------------------
+\section{Kết luận}
+Dự án đã xây dựng được một hệ thống game Unity 2D kết nối server riêng, lưu trữ trên MongoDB Atlas với kiến trúc client–server rõ ràng. Về phía client, gameplay platformer được hiện thực đầy đủ (di chuyển, nhảy, leo, dash, bắn, thu coin, kẻ địch, HUD, âm thanh SFX/BGM, cài đặt âm lượng), đồng thời tích hợp luồng đăng nhập/đăng ký và đồng bộ tiến trình với backend. Về phía server, API REST (Node.js/Express) cùng các schema MongoDB (User, GameProfile, GameSession, Level, LevelProgress) cho phép lưu trữ hồ sơ, phiên chơi, tiến trình level một cách có tổ chức, dễ mở rộng (leaderboard, achievements).\\
+
+Hệ thống đã đáp ứng các mục tiêu đề ra: dữ liệu người chơi được bảo toàn trên cloud, có khả năng đồng bộ đa thiết bị, có cơ chế xử lý lỗi và fallback, hỗ trợ kiểm thử và vận hành (Jest, swagger, backup Atlas). Tuy nhiên, vẫn còn không gian cải tiến: tối ưu thêm UI/UX (menu, feedback trong game), mở rộng phân tích thống kê (dashboard server), tăng cường bảo mật (rate limiting, refresh token), tích hợp thêm kênh phân phối build client. Trong tương lai, dự án có thể phát triển thêm nhiều chế độ chơi, hệ thống nhiệm vụ/thành tích sâu hơn, cũng như tích hợp thêm dịch vụ bên ngoài (ví dụ thanh toán, social login) để hoàn thiện trải nghiệm người dùng.
+
+\end{document}
+

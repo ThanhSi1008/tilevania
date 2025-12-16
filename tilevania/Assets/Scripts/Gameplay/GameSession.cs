@@ -16,6 +16,7 @@ public class GameSession : MonoBehaviour
 
     [SerializeField] TextMeshProUGUI livesText;
     [SerializeField] TextMeshProUGUI scoreText;
+    [SerializeField] TextMeshProUGUI levelText;
 
     private float lastSyncTime = 0f;
     private const float SYNC_INTERVAL = 10f; // Sync every 10 seconds
@@ -279,6 +280,12 @@ public class GameSession : MonoBehaviour
             return;
         }
         
+        // Recover text references when scene loads (they might have been destroyed when returning to main menu)
+        if (IsGameplaySceneForScene(scene))
+        {
+            StartCoroutine(RecoverTextReferencesDelayed());
+        }
+        
         // Prevent duplicate calls for the same scene
         // Unity may call OnSceneLoaded multiple times, or when scene is already loaded
         if (lastStartedSceneName == scene.name && (isStartingSession || isSessionActive))
@@ -288,6 +295,52 @@ public class GameSession : MonoBehaviour
         }
         
         StartSessionForScene(scene);
+    }
+    
+    private IEnumerator RecoverTextReferencesDelayed()
+    {
+        // Wait a few frames to ensure scene is fully loaded and UI elements are created
+        yield return null;
+        yield return null;
+        yield return null;
+        
+        // Recover all text references
+        EnsureScoreTextReference();
+        EnsureLevelTextReference();
+        EnsureLivesTextReference();
+        
+        // Update text values if references were found
+        if (scoreText != null)
+        {
+            scoreText.text = score.ToString();
+        }
+        
+        if (livesText != null)
+        {
+            livesText.text = playerLives.ToString();
+        }
+        
+        // Update level text if we have a current level ID
+        if (levelText != null && !string.IsNullOrEmpty(currentLevelId))
+        {
+            UpdateLevelText(currentLevelId);
+        }
+    }
+    
+    private void EnsureLivesTextReference()
+    {
+        if (livesText != null) return;
+
+        // Try to find by common name in the active scene hierarchy
+        var allText = FindObjectsByType<TextMeshProUGUI>(FindObjectsSortMode.None);
+        foreach (var t in allText)
+        {
+            if (t != null && t.name == "Lives Text")
+            {
+                livesText = t;
+                break;
+            }
+        }
     }
     
     private IEnumerator HideLoadingOverlayDelayed()
@@ -429,6 +482,18 @@ public class GameSession : MonoBehaviour
         if (scoreText != null)
         {
             scoreText.text = score.ToString();
+        }
+
+        // Try to find level text reference if not assigned
+        if (levelText == null)
+        {
+            EnsureLevelTextReference();
+        }
+
+        // Update level text if we have a current level ID
+        if (!string.IsNullOrEmpty(currentLevelId))
+        {
+            UpdateLevelText(currentLevelId);
         }
         
         // Also try to start session in Start() in case OnSceneLoaded wasn't called
@@ -609,6 +674,19 @@ public class GameSession : MonoBehaviour
         var levelId = currentLevelId;
         // Debug.Log($"[GameSession] Resolved levelId={levelId}");
 
+        // Ensure level text reference is found before updating
+        EnsureLevelTextReference();
+        
+        // Update level text with the current level name
+        if (!string.IsNullOrEmpty(levelId))
+        {
+            UpdateLevelText(levelId);
+        }
+        else
+        {
+            Debug.LogWarning("[GameSession] levelId is empty, cannot update level text");
+        }
+
         if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(levelId))
         {
             // Debug.LogError($"[GameSession] ❌ Cannot start session - userId={userId}, levelId={levelId}");
@@ -665,29 +743,42 @@ public class GameSession : MonoBehaviour
 
         if (apiResult != null && apiResult.success && !string.IsNullOrEmpty(apiResult.data))
         {
+            SessionStartResponse response = null;
+            bool parseSuccess = false;
+            
             try
             {
-                var response = JsonUtility.FromJson<SessionStartResponse>(apiResult.data);
-                if (response != null && response.session != null && !string.IsNullOrEmpty(response.session._id))
-                {
-                    SessionManager.Instance.SetActiveSession(response.session._id);
-                    cachedSessionId = response.session._id; // Cache sessionId in case SessionManager.Instance becomes null
-                    isSessionActive = true; // Only set to true after successful session creation
-                    isStartingSession = false; // Mark that session start is complete
-                    // Debug.Log($"[GameSession] ✅ Session started successfully - sessionId={response.session._id}, isSessionActive={isSessionActive}");
-                }
-                else
-                {
-                    isStartingSession = false; // Mark that session start failed
-                    // Debug.LogWarning("[GameSession] ❌ Failed to parse session start response");
-                    // Debug.LogWarning($"[GameSession] Response data: {apiResult.data}");
-                }
+                response = JsonUtility.FromJson<SessionStartResponse>(apiResult.data);
+                parseSuccess = true;
             }
             catch (Exception)
             {
                 isStartingSession = false; // Mark that session start failed
                 // Debug.LogError($"[GameSession] ❌ Error parsing session start response");
                 // Debug.LogError($"[GameSession] Response data: {apiResult.data}");
+            }
+            
+            if (parseSuccess && response != null && response.session != null && !string.IsNullOrEmpty(response.session._id))
+            {
+                SessionManager.Instance.SetActiveSession(response.session._id);
+                cachedSessionId = response.session._id; // Cache sessionId in case SessionManager.Instance becomes null
+                isSessionActive = true; // Only set to true after successful session creation
+                isStartingSession = false; // Mark that session start is complete
+                // Debug.Log($"[GameSession] ✅ Session started successfully - sessionId={response.session._id}, isSessionActive={isSessionActive}");
+                
+                // Ensure level text is updated after session starts (text might have been recreated)
+                yield return null; // Wait a frame for UI to be ready
+                EnsureLevelTextReference();
+                if (!string.IsNullOrEmpty(currentLevelId))
+                {
+                    UpdateLevelText(currentLevelId);
+                }
+            }
+            else if (parseSuccess)
+            {
+                isStartingSession = false; // Mark that session start failed
+                // Debug.LogWarning("[GameSession] ❌ Failed to parse session start response");
+                // Debug.LogWarning($"[GameSession] Response data: {apiResult.data}");
             }
         }
         else
@@ -870,6 +961,12 @@ public class GameSession : MonoBehaviour
     {
         deathCount++;
         
+        // Play death sound
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayDeath();
+        }
+        
         // Sync death immediately
         StartCoroutine(SyncDeathToServer());
 
@@ -896,6 +993,12 @@ public class GameSession : MonoBehaviour
         else
         {
             Debug.Log("[GameSession] Game Over! Showing modal.");
+
+            // Play game over sound
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayGameOver();
+            }
 
             // ✅ Spawn the GameOver modal if not already active
             if (activeGameOverModal == null && gameOverModalPrefab != null)
@@ -1026,6 +1129,81 @@ public class GameSession : MonoBehaviour
                 scoreText = t;
                 break;
             }
+        }
+    }
+
+    /// <summary>
+    /// Try to recover the Level Text reference if it was destroyed (e.g., when returning to main menu and back).
+    /// </summary>
+    private void EnsureLevelTextReference()
+    {
+        if (levelText != null) return;
+
+        // Try to find by common name in the active scene hierarchy
+        var allText = FindObjectsByType<TextMeshProUGUI>(FindObjectsSortMode.None);
+        foreach (var t in allText)
+        {
+            if (t != null && t.name == "Level Text")
+            {
+                levelText = t;
+                break;
+            }
+        }
+    }
+
+    private void UpdateLevelText(string levelId)
+    {
+        // Try to find level text if not already found
+        if (levelText == null)
+        {
+            EnsureLevelTextReference();
+        }
+        
+        if (levelText == null)
+        {
+            Debug.LogWarning("[GameSession] Level Text not found! Make sure 'Level Text' GameObject exists in the scene.");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(levelId))
+        {
+            // Try to get level from current scene name as fallback
+            var scene = SceneManager.GetActiveScene();
+            if (!string.IsNullOrEmpty(scene.name))
+            {
+                levelText.text = scene.name;
+                Debug.Log($"[GameSession] Level Text set to scene name: {scene.name} (no levelId)");
+            }
+            else
+            {
+                levelText.text = "Level";
+            }
+            return;
+        }
+
+        // Get level data from LevelProgressManager
+        if (LevelProgressManager.Instance != null)
+        {
+            var levelData = LevelProgressManager.Instance.GetLevelData(levelId);
+            if (levelData != null && !string.IsNullOrEmpty(levelData.levelName))
+            {
+                levelText.text = levelData.levelName;
+                Debug.Log($"[GameSession] Level Text updated to: {levelData.levelName} (levelId: {levelId})");
+            }
+            else
+            {
+                // Fallback to scene name
+                var scene = SceneManager.GetActiveScene();
+                levelText.text = !string.IsNullOrEmpty(scene.name) ? scene.name : "Level";
+                Debug.LogWarning($"[GameSession] Level data not found for levelId: {levelId}, using scene name: {scene.name}");
+            }
+        }
+        else
+        {
+            // Fallback to scene name if LevelProgressManager not available
+            var scene = SceneManager.GetActiveScene();
+            levelText.text = !string.IsNullOrEmpty(scene.name) ? scene.name : "Level";
+            Debug.LogWarning("[GameSession] LevelProgressManager.Instance is null, using scene name as fallback");
         }
     }
 

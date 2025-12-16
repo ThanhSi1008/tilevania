@@ -218,6 +218,12 @@ public class LoginManager : MonoBehaviour
         AuthManager.Instance?.SetAuth(response.token, player);
         SetStatus("Login successful!");
 
+        // Play background music on successful login
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayBackgroundMusic();
+        }
+
         // Switch to main menu
         if (loginPanel != null) loginPanel.SetActive(false);
         if (registerPanel != null) registerPanel.SetActive(false);

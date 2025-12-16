@@ -22,6 +22,13 @@ public class LevelExit : MonoBehaviour
         if (other.CompareTag("Player") && !isProcessing)
         {
             isProcessing = true;
+            
+            // Play level exit sound
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayLevelExit();
+            }
+            
             StartCoroutine(LoadNextLevel());
         }
         else if (isProcessing)

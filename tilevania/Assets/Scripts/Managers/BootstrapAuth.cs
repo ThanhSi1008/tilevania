@@ -11,6 +11,7 @@ public class BootstrapAuth : MonoBehaviour
     [SerializeField] private GameObject loginPanel;
     [SerializeField] private GameObject registerPanel;
     [SerializeField] private GameObject mainMenuPanel;
+    [SerializeField] private GameObject soundSettingsPanel;
     
     [Header("Managers")]
     [SerializeField] private MainMenuManager mainMenuManager;
@@ -89,18 +90,76 @@ public class BootstrapAuth : MonoBehaviour
         else
         {
         }
+
+        // Hide sound settings panel when switching to login
+        if (soundSettingsPanel != null)
+        {
+            soundSettingsPanel.SetActive(false);
+        }
     }
 
-    private void ShowMainMenu()
+    public void ShowMainMenu()
     {
         if (loginPanel != null) loginPanel.SetActive(false);
         if (registerPanel != null) registerPanel.SetActive(false);
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
         
+        // Hide sound settings panel when showing main menu
+        if (soundSettingsPanel != null)
+        {
+            soundSettingsPanel.SetActive(false);
+        }
+        
         // Refresh UI to show username
         if (mainMenuManager != null)
         {
             mainMenuManager.RefreshUI();
+        }
+    }
+
+    public void ShowSoundSettings()
+    {
+        Debug.Log("[BootstrapAuth] ShowSoundSettings() called");
+        
+        // Hide all other panels first
+        if (loginPanel != null) loginPanel.SetActive(false);
+        if (registerPanel != null) registerPanel.SetActive(false);
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+        
+        // Show sound settings panel
+        if (soundSettingsPanel != null)
+        {
+            Debug.Log("[BootstrapAuth] Sound settings panel found, showing it");
+            var soundSettings = soundSettingsPanel.GetComponent<SoundSettingsPanel>();
+            if (soundSettings != null)
+            {
+                soundSettings.ShowPanel();
+            }
+            else
+            {
+                Debug.LogWarning("[BootstrapAuth] SoundSettingsPanel component not found, activating GameObject directly");
+                soundSettingsPanel.SetActive(true);
+            }
+        }
+        else
+        {
+            Debug.LogError("[BootstrapAuth] Sound settings panel is not assigned! Please assign it in the Inspector.");
+        }
+    }
+
+    public void HideSoundSettings()
+    {
+        if (soundSettingsPanel != null)
+        {
+            var soundSettings = soundSettingsPanel.GetComponent<SoundSettingsPanel>();
+            if (soundSettings != null)
+            {
+                soundSettings.HidePanel();
+            }
+            else
+            {
+                soundSettingsPanel.SetActive(false);
+            }
         }
     }
 

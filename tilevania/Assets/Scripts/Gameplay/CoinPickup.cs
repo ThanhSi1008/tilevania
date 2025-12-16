@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class CoinPickup : MonoBehaviour
 {
-    [SerializeField] AudioClip coinPickupSFX;
     [SerializeField] int pointsForCoinPickup = 100;
 
     bool wasCollected = false;
@@ -18,7 +17,13 @@ public class CoinPickup : MonoBehaviour
                 gameSession.AddToScore(pointsForCoinPickup);
                 gameSession.AddCoin(); // Track coin collection
             }
-            AudioSource.PlayClipAtPoint(coinPickupSFX, transform.position);
+            
+            // Play coin pickup sound through AudioManager
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayCoinPickup();
+            }
+            
             gameObject.SetActive(false);
             Destroy(gameObject);
         }

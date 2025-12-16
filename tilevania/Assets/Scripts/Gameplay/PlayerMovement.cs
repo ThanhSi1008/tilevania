@@ -67,6 +67,12 @@ public class PlayerMovement : MonoBehaviour
         if (value.isPressed)
         {
             myRigidbody.linearVelocity += new Vector2(0f, jumpSpeed);
+            
+            // Play jump sound
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayJump();
+            }
         }
     }
 
@@ -147,6 +153,12 @@ public class PlayerMovement : MonoBehaviour
         if (LevelExit.IsLoading) return;
 
         Instantiate(bullet, gun.position, transform.rotation);
+        
+        // Play shoot sound
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayShoot();
+        }
     }
 
     void Die()

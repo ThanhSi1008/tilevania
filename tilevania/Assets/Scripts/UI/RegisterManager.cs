@@ -159,6 +159,12 @@ public class RegisterManager : MonoBehaviour
         AuthManager.Instance?.SetAuth(response.token, player);
         SetStatus("Register successful. Please login with your new account.");
 
+        // Play background music on successful registration
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayBackgroundMusic();
+        }
+
         // After successful registration, switch to Login panel instead of MainMenu
         if (registerPanel != null) registerPanel.SetActive(false);
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
