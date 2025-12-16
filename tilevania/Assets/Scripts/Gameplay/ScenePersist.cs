@@ -9,7 +9,8 @@ public class ScenePersist : MonoBehaviour
         "Level Text",
         "Score Icon",
         "Score Text",
-        "Lives Text"
+        "Lives Text",
+        "MainMenuButton"
     };
 
     void Awake()
@@ -26,8 +27,8 @@ public class ScenePersist : MonoBehaviour
 
     public static void ResetAll()
     {
-        // Clear specific UI objects (under the gameplay canvas) before removing ScenePersist
-        DestroyObjectsByName(DefaultCleanupNames);
+        // Clear (hide) specific UI objects (under the gameplay canvas) before removing ScenePersist
+        HideObjectsByName(DefaultCleanupNames);
 
         ScenePersist[] persists =
             FindObjectsByType<ScenePersist>(FindObjectsSortMode.None);
@@ -38,11 +39,11 @@ public class ScenePersist : MonoBehaviour
         }
     }
 
-    private static void DestroyObjectsByName(string[] names)
+    private static void HideObjectsByName(string[] names)
     {
         if (names == null || names.Length == 0) return;
 
-        var allObjects = FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+        var allObjects = FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (var go in allObjects)
         {
             if (go == null) continue;
@@ -50,11 +51,40 @@ public class ScenePersist : MonoBehaviour
             {
                 if (go.name == n)
                 {
-                    Destroy(go);
+                    // Thay vì Destroy, chỉ ẩn để khi quay lại gameplay có thể kích hoạt lại
+                    go.SetActive(false);
                     break;
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Reactivate HUD objects that were hidden when returning to MainMenu.
+    /// Call this when entering a gameplay scene before trying to find HUD references.
+    /// </summary>
+    public static void ShowObjectsByName(string[] names)
+    {
+        if (names == null || names.Length == 0) return;
+
+        var allObjects = FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var go in allObjects)
+        {
+            if (go == null) continue;
+            foreach (var n in names)
+            {
+                if (go.name == n)
+                {
+                    go.SetActive(true);
+                    break;
+                }
+            }
+        }
+    }
+
+    public static void ReactivateHud()
+    {
+        ShowObjectsByName(DefaultCleanupNames);
     }
 
     public void ResetScenePersist()

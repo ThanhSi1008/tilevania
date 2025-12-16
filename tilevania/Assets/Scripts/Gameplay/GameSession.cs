@@ -633,6 +633,9 @@ public class GameSession : MonoBehaviour
         
         // Ensure we start with a clean state
         isSessionActive = false;
+
+        // Reactivate HUD objects that were hidden when returning to MainMenu
+        ScenePersist.ReactivateHud();
         
         if (AuthManager.Instance == null || !AuthManager.Instance.HasToken())
         {

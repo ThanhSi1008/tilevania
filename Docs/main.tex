@@ -7,28 +7,60 @@
 %------------------------------------------------------
 \begin{titlepage}
 \begin{center}
-{\Large \bf TRƯỜNG ĐẠI HỌC CÔNG NGHIỆP TP.HCM}\\
-{\large Khoa Công Nghệ Thông Tin}\\[1cm]
-{\Large \bf BÁO CÁO DỰ ÁN}\\[0.5cm]
+{\Large \bf BỘ CÔNG THƯƠNG}\\ [0.5cm]
+{\Large \bf TRƯỜNG ĐẠI HỌC CÔNG NGHIỆP TP.HCM}\\ [0.5cm]
+{\large \bf KHOA CÔNG NGHỆ THÔNG TIN}\\[1.5cm]
+\includegraphics[width=0.6\textwidth]{logo}\\ [1cm]
+{\Large \bf BÁO CÁO DỰ ÁN}\\ [1cm]
 {\Large \bf Unity Game + Server MongoDB Atlas}\\[1cm]
+{\Large \bf MÔN: Công nghệ mới trong phát triển ứng dụng CNTT}\\[1cm]
+\vspace{0.5cm}
+{\LARGE \bf Giảng viên hướng dẫn: Ths.Nguyễn Ngọc Lễ}\\
+\vspace{0.5cm}
+{\LARGE \bf Nhóm: 23}\\
+\vspace{0.5cm}
+{\LARGE \bf Lớp: DHKHMT18A}\\
+
 
 \vspace{0.5cm}
-\begin{tabular}{ll}
-Lớp  & DHKTPM18B\\
-Nhóm & (cập nhật)\\
-GVHD & (cập nhật)\\
-\end{tabular}
 \vfill
 TP. Hồ Chí Minh, Tháng 12 Năm 2025
 \end{center}
 \end{titlepage}
 
 %------------------------------------------------------
-% Table of contents
+% Lời mở đầu
 %------------------------------------------------------
-\renewcommand\contentsname{\centering\LARGE Nội dung}
-\tableofcontents
-\newpage
+\section*{Lời mở đầu}
+Trong bối cảnh các trò chơi không chỉ dừng lại ở giải trí đơn thuần mà còn là môi trường thử nghiệm công nghệ, việc xây dựng một game 2D có kết nối backend và lưu trữ dữ liệu trên nền tảng đám mây giúp sinh viên tiếp cận thực tế với các mô hình hệ thống hiện đại. Đề tài ``Unity Game + Server MongoDB Atlas'' được thực hiện với mục tiêu kết hợp giữa lập trình game client (Unity) và phát triển dịch vụ web (REST API) trên Node.js/Express, đồng thời vận dụng cơ sở dữ liệu NoSQL (MongoDB Atlas) trong bài toán đồng bộ hoá tiến trình người chơi.
+
+Báo cáo này trình bày toàn bộ quá trình xây dựng hệ thống: từ thiết kế gameplay, kiến trúc client–server, thiết kế dữ liệu, API, đến các vấn đề kiểm thử, vận hành và triển khai. Thông qua đó, nhóm mong muốn minh hoạ một quy trình phát triển phần mềm tương đối hoàn chỉnh cho một ứng dụng game có kết nối mạng, qua đó củng cố kiến thức đã học về lập trình, cơ sở dữ liệu và công nghệ web.
+
+Nhóm xin chân thành cảm ơn quý thầy cô Khoa Công Nghệ Thông Tin, đặc biệt là giảng viên hướng dẫn, đã hỗ trợ, góp ý và tạo điều kiện để nhóm hoàn thành đồ án này. Mặc dù đã nỗ lực, báo cáo khó tránh khỏi những thiếu sót; nhóm rất mong nhận được các ý kiến đóng góp để hoàn thiện hơn trong các nghiên cứu và sản phẩm sau này.
+\addcontentsline{toc}{section}{Lời mở đầu}
+
+%------------------------------------------------------
+% Danh sách thành viên và phân công công việc (gộp)
+%------------------------------------------------------
+\section*{Danh sách thành viên và phân công}
+\addcontentsline{toc}{section}{Danh sách thành viên và phân công}
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{0.98\textwidth}{|c|c|c|X|}
+        \hline
+        \textbf{STT} & \textbf{MSSV} & \textbf{Họ và tên} & \textbf{Nhiệm vụ chi tiết} \\
+        \hline
+        1 & 22634631 & Phạm Đức Tài & 
+        Thiết kế và lập trình client Unity: xây dựng gameplay platformer (di chuyển, nhảy, dash, bắn, va chạm), tối ưu animation và vật lý nhân vật; hiện thực HUD (Lives/Score/Level) gắn với GameSession; thiết kế UI cho AuthScene, MainMenu, Settings và tích hợp luồng gọi API (đăng nhập/đăng ký, start/update/end session, level progress) vào game. \\
+        \hline
+        2 & 22639301 & Lai Thanh Sĩ & 
+        Phát triển backend Node.js/Express: thiết kế và hiện thực các API auth, gameProfile, sessions, levelProgress, levels; xây dựng schema và chỉ mục cho MongoDB Atlas (users, gameProfiles, gameSessions, levels, levelProgress, leaderboard, achievements); viết script seed dữ liệu demo; cấu hình và triển khai server trên Render (biến môi trường, kết nối Atlas, kiểm tra healthcheck và log). \\
+        \hline
+        3 & 22639861 & Hoàng Phi Hùng & 
+        Thực hiện kiểm thử end-to-end giữa client và server (auth, lưu tiến trình, leaderboard/achievements, quay về MainMenu và chơi lại), xây dựng kịch bản test chi tiết; thu thập và phân tích log lỗi UI/UX và API; chuẩn hoá giao diện (layout, font, thông báo lỗi); biên soạn và hoàn thiện báo cáo (kiến trúc, ERD, API, UI/Gameplay, Atlas/Render) và hỗ trợ cấu hình CI/CD, theo dõi chất lượng hệ thống. \\
+        \hline
+    \end{tabularx}
+\end{table}
 
 %------------------------------------------------------
 % Abstract / Tóm tắt
@@ -36,6 +68,14 @@ TP. Hồ Chí Minh, Tháng 12 Năm 2025
 \section*{Tóm tắt}
 Game platformer 2D phát triển bằng Unity, kết nối backend REST, lưu trữ trên MongoDB Atlas. Báo cáo mô tả kiến trúc client–server, gameplay, đồng bộ dữ liệu người chơi, thiết kế dữ liệu, API, UI/UX, kiểm thử, vận hành và kế hoạch triển khai.
 \addcontentsline{toc}{section}{Tóm tắt}
+\newpage
+
+%------------------------------------------------------
+% Table of contents
+%------------------------------------------------------
+\renewcommand\contentsname{\centering\LARGE Nội dung}
+\tableofcontents
+\newpage
 
 %------------------------------------------------------
 % Giới thiệu
@@ -48,7 +88,7 @@ Trò chơi hành động đi cảnh 2D (platformer) với nhân vật chính vư
     \item \textbf{Đồng bộ đa thiết bị}: tiến trình và hồ sơ người chơi lưu trên server; client chỉ cache ngắn hạn.
     \item \textbf{Dễ mở rộng}: API rõ, mô hình dữ liệu tách bạch (User, GameProfile, GameSession, Level, LevelProgress), dễ bổ sung leaderboard/achievement.
     \item \textbf{Vận hành được}: có log, chỉ mục, backup Atlas, CI/CD cơ bản.
-\end{itemize}
+    \end{itemize}
 \subsection{Phạm vi và đối tượng}
 Phạm vi:
 \begin{itemize}[leftmargin=1.5em]
@@ -101,8 +141,8 @@ Chỉ mục chính: users(email, username), gameProfiles(userId), gameSessions(u
     \item Server: env \texttt{MONGODB\_URI}, \texttt{DB\_NAME}, \texttt{JWT\_SECRET}, \texttt{PORT}; CORS; nodemon cho dev; Jest test; swagger doc.
     \item Client: cấu hình base URL API, timeout, retry ngắn khi start/end session; fallback nếu API null; pause BGM khi volume 0.
     \item Graceful shutdown: lắng nghe SIGTERM/SIGINT, đóng server sạch.
-\end{itemize}
-
+    \end{itemize}
+    
 %------------------------------------------------------
 % Thiết kế gameplay và nội dung
 %------------------------------------------------------
@@ -180,6 +220,20 @@ Luồng AuthScene:
     \item \textbf{End session} \texttt{POST /api/sessions/:sessionId/end}: chốt trạng thái (COMPLETED/FAILED/ABANDONED), duration.
     \item \textbf{Complete level} \texttt{POST /api/levelProgress/:userId/:levelId/complete}: đánh dấu hoàn thành, cập nhật bestScore/bestTime/playCount/isCompleted; đồng bộ GameProfile (totalScore,...).
 \end{itemize}
+\subsection{Sơ đồ luồng đăng nhập / phiên chơi (mô tả)}
+\textbf{Luồng đăng nhập/đăng ký}:
+\begin{itemize}[leftmargin=1.5em]
+    \item Người chơi nhập thông tin → AuthScene gọi \texttt{/api/auth/login} hoặc \texttt{/api/auth/register}.
+    \item Server xác thực, trả JWT + user, cập nhật \texttt{lastLoginAt}.
+    \item Client lưu token, bật nhạc nền, tải profile (currentLives, currentLevel, totalScore), chuyển MainMenu.
+\end{itemize}
+\textbf{Luồng phiên chơi (start → sync → end)}:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textit{Start}: Chọn level → \texttt{POST /api/sessions} (userId, levelId) \textrightarrow\ sessionId; tải/khởi tạo LevelProgress.
+    \item \textit{Sync trong phiên}: định kỳ \texttt{PUT /api/sessions/:sessionId} gửi score, coins, enemiesDefeated, deathCount, livesRemaining.
+    \item \textit{Complete level}: \texttt{POST /api/levelProgress/:userId/:levelId/complete} cập nhật bestScore/bestTime/playCount/isCompleted.
+    \item \textit{End}: \texttt{POST /api/sessions/:sessionId/end} với trạng thái (COMPLETED/FAILED/ABANDONED) và duration; nếu mất kết nối có thể bỏ qua end.
+\end{itemize}
 \subsection{Xử lý lỗi và retry}
 \begin{itemize}[leftmargin=1.5em]
     \item Client kiểm tra null API: nếu thiếu LevelProgressManager/AchievementManager, log warning và bỏ qua.
@@ -187,6 +241,16 @@ Luồng AuthScene:
     \item Khi network lỗi nặng: fallback reload scene hiện tại; EndSession có thể bỏ qua nếu không có sessionId.
     \item BGM/SFX không phụ thuộc mạng; HUD được khôi phục local nếu UI bị destroy.
 \end{itemize}
+
+%------------------------------------------------------
+% Sơ đồ ERD
+%------------------------------------------------------
+\section{Sơ đồ ERD}
+\begin{figure}[H]
+    \centering
+            \includegraphics[width=0.95\textwidth]{erd.png}
+    \caption{Sơ đồ ERD của hệ thống}
+\end{figure}
 
 %------------------------------------------------------
 % Thiết kế dữ liệu
@@ -208,9 +272,6 @@ Các ràng buộc chính:
     \item Giá trị số không âm (min: 0) cho điểm, coin, kẻ địch, số lần chết, thời gian.
     \item Khoá ngoại logic qua \texttt{ref} tới \texttt{User} và \texttt{Level} (được kiểm tra ở tầng API).
 \end{itemize}
-\subsection{Backup / restore}
-Dùng backup Atlas (snapshot), cấu hình PITR nếu cần; kiểm tra khôi phục định kỳ.
-
 %------------------------------------------------------
 % API chính
 %------------------------------------------------------
@@ -250,7 +311,7 @@ Nhóm API \texttt{/api/levelProgress}:
 \end{itemize}
 Nhóm API \texttt{/api/levels}:
 \begin{itemize}[leftmargin=1.5em]
-    \item \textbf{GET /api/levels}: trả danh sách level (phục vụ client mapping sceneName ↔ levelId).
+    \item \textbf{GET /api/levels}: trả danh sách level (phục vụ client mapping sceneName $\leftrightarrow$ levelId).
     \item \textbf{GET /api/levels/:levelId}: chi tiết một level (tên, số level, độ khó, điểm yêu cầu để mở khoá).
 \end{itemize}
 Các nhóm \texttt{/api/leaderboard}, \texttt{/api/achievements} (nếu dùng) phục vụ xếp hạng và thành tích.
@@ -268,7 +329,7 @@ AuthScene: \textbf{Login} / \textbf{Register} → \textbf{Main Menu} → \textbf
     \item Login: form email/password; nút Login gọi API; statusText hiển thị lỗi; loadingOverlay khóa thao tác trong lúc chờ.
     \item Register: form username/email/password; nút Register; sau khi đăng ký thành công vẫn ở trạng thái login (theo flow hiện tại), có thể điều hướng về Login; statusText/overlay tương tự.
     \item Chuyển đổi panel: nút “Go Register” và “Back to Login” ẩn/hiện các panel tương ứng.
-\end{itemize}
+    \end{itemize}
 \subsection{HUD trong game}
 \begin{itemize}[leftmargin=1.5em]
     \item Hiển thị Lives, Score, Level (và Score Icon). Khi quay về main menu, các text này có thể bị destroy; GameSession (DontDestroyOnLoad) sẽ tìm lại theo name (“Lives Text”, “Score Text”, “Level Text”, “Score Icon”) sau khi scene gameplay load.
@@ -280,54 +341,70 @@ AuthScene: \textbf{Login} / \textbf{Register} → \textbf{Main Menu} → \textbf
     \item Slider MusicVolume: điều chỉnh âm lượng chính (ảnh hưởng BGM và nhân với SFX); SFXVolume nhân thêm cho SFX; Mute toggle đặt âm lượng về 0 logic.
     \item Lưu PlayerPrefs: MusicVolume, SFXVolume, IsMuted; áp dụng real-time; nếu MusicVolume = 0 thì BGM pause; >0 thì unpause.
     \item Button click: tất cả button có thể gắn UIButtonClickSound; riêng Settings button dùng SoundSettingsButton để mở panel.
-\end{itemize}
-
-%------------------------------------------------------
-% Kiểm thử
-%------------------------------------------------------
-\section{Kiểm thử}
-\subsection{Kịch bản kiểm thử client}
-Di chuyển/nhảy/bắn/dash; thu coin; chết và game over; load level tiếp; âm thanh sự kiện; level text đúng.
-\subsection{Kiểm thử API}
-Login/Register; start/end session; update lives; complete level; lỗi mạng/timeout.
-\subsection{Kiểm thử tích hợp}
-Cloud save/restore tiến trình; currentLevel đồng bộ; HUD hiển thị đúng sau quay lại game.
-\subsection{Hiệu năng và tải}
-FPS ổn định; thời gian phản hồi API; độ trễ sync chấp nhận được.
-
+    \end{itemize}
+\subsection{Hình minh hoạ giao diện}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{login.png}
+    \caption{Màn hình Login}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{register.png}
+    \caption{Màn hình Register}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{mainMenu.png}
+    \caption{Main Menu}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{achivement.png}
+    \caption{Màn hình Achievements}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{leaderboard.png}
+    \caption{Màn hình Leaderboard}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{setting.png}
+    \caption{Màn hình Settings âm thanh}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{level-1.png}
+    \caption{Gameplay Level 1}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{level-2.png}
+    \caption{Gameplay Level 2}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{level-3.png}
+    \caption{Gameplay Level 3}
+\end{figure}
+    
 %------------------------------------------------------
 % Vận hành và triển khai
 %------------------------------------------------------
 \section{Vận hành / triển khai}
 \subsection{CI/CD}
 \begin{itemize}[leftmargin=1.5em]
-    \item Server: pipeline build/test (Jest), lint/validate; deploy Node/Express (commonjs). Có script seed (utils/seedDB) và leaderboard (utils/calculateLeaderboard).
+    \item Server: pipeline build/test (Jest), lint/validate; deploy Node/Express (commonjs) lên Render (web service). Có script seed (utils/seedDB) và leaderboard (utils/calculateLeaderboard).
+    \item Biến môi trường Render: \texttt{MONGODB\_URI}, \texttt{DB\_NAME}, \texttt{JWT\_SECRET}, \texttt{PORT} (Render tự cấp); base URL API công khai để Unity gọi.
     \item Client: build Unity; (khuyến nghị) tự động hóa đóng gói build cho target platform; có thể cấu hình step gọi API healthcheck sau deploy.
-\end{itemize}
+    \end{itemize}
 \subsection{Cấu hình MongoDB Atlas}
 \begin{itemize}[leftmargin=1.5em]
-    \item Biến môi trường: \texttt{MONGODB\_URI} (SRV), \texttt{DB\_NAME}, user Atlas tối thiểu quyền; IP whitelist.
+    \item Biến môi trường: \texttt{MONGODB\_URI} (SRV), \texttt{DB\_NAME}, user Atlas tối thiểu quyền; IP whitelist (thêm outbound IP của Render).
     \item Atlas backup: snapshot/PITR; giám sát index, CPU/Memory, kết nối; dùng chỉ mục đã khai báo trong schema.
     \item Quy hoạch dữ liệu: userId/levelId là ObjectId; levelNumber unique; levelProgress unique (userId, levelId).
 \end{itemize}
-\subsection{Giám sát và cảnh báo}
-\begin{itemize}[leftmargin=1.5em]
-    \item Log server: theo dõi lỗi 4xx/5xx, thời gian phản hồi các API nhạy cảm (auth, sessions).
-    \item Metric: tần suất start/end session, tỉ lệ lỗi đăng nhập/đăng ký, số request tới Atlas; alert khi spike lỗi hoặc kết nối Atlas thất bại.
-    \item Client fallback: nếu API trả null/exception, HUD vẫn hoạt động tối thiểu, có thể reload scene; âm thanh/điều khiển không phụ thuộc mạng.
-\end{itemize}
-
-%------------------------------------------------------
-% Kế hoạch và tiến độ
-%------------------------------------------------------
-\section{Kế hoạch / tiến độ}
-\subsection{Mốc công việc}
-Kiến trúc; gameplay; API; lưu trữ; kiểm thử; tối ưu; phát hành.
-\subsection{Phân công nhân sự}
-Client (Unity), Backend/API, DevOps/DB, QA.
-\subsection{Rủi ro và giảm thiểu}
-Mạng/timeout (retry, fallback); mất dữ liệu (backup Atlas); lệch phiên bản schema (kiểm tra version API).
-
 %------------------------------------------------------
 % Kết luận
 %------------------------------------------------------

@@ -16,6 +16,7 @@
 \usepackage{graphicx}					
 \usepackage{array}
 \usepackage{tabularx, caption}
+\usepackage{svg}
 \usepackage{multirow}
 \usepackage{multicol}
 \usepackage{indentfirst}
@@ -42,11 +43,34 @@
 \renewcommand\footrule{\begin{minipage}{1\textwidth}
 \hrule width \hsize height 2pt \kern 1mm \hrule width \hsize   
 \end{minipage}\par}
-\fancyfoot[L]{\scriptsize \ttfamily Tài liệu Khởi nghiệp}
-\fancyfoot[R]{\scriptsize \ttfamily Trang {\thepage}/\pageref{LastPage}}
+\fancyfoot[L]{\normalsize \ttfamily Báo cáo cuối kỳ môn Công nghệ mới}
+\fancyfoot[C]{}
+\fancyfoot[R]{\normalsize \ttfamily Trang {\thepage}/\pageref{LastPage}}
+
+% Header: trái và phải
+\fancyhead[L]{\normalsize \ttfamily IUH-FIT-SE}
+% Căn sát phải tiêu đề dài, dùng headwidth để chiếm toàn bộ chiều rộng header
+\fancyhead[R]{\normalsize \ttfamily \makebox[\headwidth][r]{Công nghệ mới trong phát triển ứng dụng CNTT}}
+
+% Đảm bảo đủ chiều cao header để tránh cảnh báo headheight
+\setlength{\headheight}{21pt}
 
 \usepackage{blindtext}
-\usepackage[skip=7pt plus1pt, indent=15pt]{parskip}
+
+%--------------------------------------------------
+% Font, size, paragraph and line spacing settings
+%--------------------------------------------------
+% Sử dụng font tương đương Times New Roman
+\usepackage{mathptmx}
+
+% Cài đặt thụt đầu dòng, khoảng cách trước đoạn, line spacing
+\AtBeginDocument{%
+  \fontsize{13pt}{16pt}\selectfont% kích thước chữ ~13pt, leading 16pt
+  \setlength{\parindent}{0pt}% không thụt dòng đầu
+  \setlength{\leftskip}{1.2cm}% dịch toàn bộ đoạn vào 1.2cm
+  \setlength{\parskip}{6pt}% khoảng cách giữa các đoạn
+  \setstretch{1.3}% line spacing ~1.3
+}
 
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
